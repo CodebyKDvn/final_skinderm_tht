@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skinderm AI - Skin Diagnosis & Health Monitoring</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/app.css">
+
+    <!-- Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+</head>
+<body>
+
+    <div class="app-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="appSidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon"><img src="assets/img/logo.png" alt="Skinderm AI"></div>
+                <span class="logo-text">Skinderm<span style="color:var(--medical-blue-base)"> AI</span></span>
+            </div>
+
+            <nav class="nav-menu" id="mainNavigation">
+                <a href="#" class="nav-item active" data-section="sec-home">
+                    <i class="fa-solid fa-house"></i> <span>Trang chủ</span>
+                </a>
+                <a href="#" class="nav-item" data-section="sec-explore">
+                    <i class="fa-solid fa-compass"></i> <span>Khám phá</span>
+                </a>
+                <a href="#" class="nav-item scan-item" data-section="sec-scan">
+                    <i class="fa-solid fa-camera"></i> <span>Quét & Phân tích</span>
+                </a>
+                <a href="#" class="nav-item" data-section="sec-monitor">
+                    <i class="fa-solid fa-chart-line"></i> <span>Theo dõi</span>
+                </a>
+                <a href="#" class="nav-item" data-section="sec-history">
+                    <i class="fa-solid fa-clock-rotate-left"></i> <span>Lịch sử</span>
+                </a>
+                <a href="#" class="nav-item" data-section="sec-doctor">
+                    <i class="fa-solid fa-user-doctor"></i> <span>Bác sĩ AI</span>
+                </a>
+                <a href="#" class="nav-item" data-section="sec-settings">
+                    <i class="fa-solid fa-gear"></i> <span>Cài đặt</span>
+                </a>
+                <a href="#" class="nav-item" data-section="sec-account">
+                    <i class="fa-solid fa-circle-user"></i> <span>Tài khoản</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="collapse-toggle" id="toggleSidebar" title="Thu gọn sidebar">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- SECTION: HOME -->
+            <section id="sec-home" class="view-section active">
+                <div class="welcome-header">
+                    <h1 id="welcomeGreeting">Chào buổi tối, Bác sĩ!</h1>
+                    <p style="color: var(--text-secondary)">Theo dõi tình trạng sức khỏe da của bạn hôm nay.</p>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="weather-card">
+                        <div class="weather-video-container" id="weatherVidContainer">
+                            <video autoplay muted loop playsinline id="weatherVideo">
+                                <source src="assets/video/sunny.mp4" type="video/mp4">
+                            </video>
+                        </div>
+                        <div class="weather-overlay"></div>
+                        <div class="weather-content">
+                            <div>
+                                <h3 id="weatherLocation" style="font-size: 1.25rem;">Hà Nội, VN</h3>
+                                <p id="weatherDate" style="font-size: 0.85rem; opacity: 0.9;">Thứ Hai, 13 Tháng 4</p>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                                <div style="font-size: 3.5rem; font-weight: 800; line-height: 1;">
+                                    <span id="tempValue">--</span>°C
+                                </div>
+                                <div style="text-align: right;">
+                                    <div class="pill pill-success" id="uvBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; margin-bottom: 5px; backdrop-filter: blur(5px);">
+                                        UV Index: <span id="uvValue">--</span>
+                                    </div>
+                                    <p id="weatherAdvice" style="font-size: 0.85rem; max-width: 200px; font-weight: 500;">Đang tải lời khuyên thời tiết...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-glass">
+                        <div class="card-header">
+                            <i class="fa-solid fa-chart-area" style="color: var(--medical-blue-base)"></i>
+                            Tiến triển rủi ro 7 lần quét gần nhất
+                        </div>
+                        <div style="height: 160px; position: relative;">
+                            <canvas id="homeProgressChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 card-glass" style="margin-top: 2rem;">
+                    <div class="card-header"><i class="fa-solid fa-clock-rotate-left"></i> Hoạt động gần đây</div>
+                    <div id="homeRecentActivity">
+                        <p style="text-align: center; color: var(--text-muted); padding: 2rem;">Chưa có dữ liệu phân tích gần đây.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: EXPLORE -->
+            <section id="sec-explore" class="view-section">
+                <div class="welcome-header">
+                    <h1>Khám phá Da liễu</h1>
+                    <p style="color: var(--text-secondary)">Cập nhật thông tin y khoa mới nhất từ AI & LangGraph.</p>
+                </div>
+                <div class="explore-grid" id="exploreGrid">
+                    <div style="grid-column: 1/-1; text-align: center; padding: 5rem;">
+                        <i class="fa-solid fa-spinner fa-spin fa-2x" style="color: var(--medical-blue-base)"></i>
+                        <p class="mt-2" style="color: var(--text-secondary);">Đang tải dữ liệu y khoa mới nhất...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: SCAN -->
+            <section id="sec-scan" class="view-section">
+                <div class="welcome-header">
+                    <h1>Phân tích Tổn thương Da</h1>
+                    <p style="color: var(--text-secondary)">Sử dụng Trí tuệ Nhân tạo Skinderm AI để đánh giá nguy cơ.</p>
+                </div>
+                
+                <div class="scan-workspace-layout">
+                    <!-- Main Capture Area -->
+                    <div class="card-glass" style="position: relative; display: flex; flex-direction: column;">
+                        <!-- Input Select -->
+                        <div id="scanInputSelect" style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
+                            <button class="btn-pill btn-blue" id="btnShowUpload"><i class="fa-solid fa-upload"></i> Tải ảnh lên</button>
+                            <button class="btn-pill" style="background:#f1f5f9; color:var(--text-primary); border: 1px solid var(--border-light);" id="btnShowCamera"><i class="fa-solid fa-camera"></i> Máy ảnh</button>
+                        </div>
+
+                        <!-- Upload View -->
+                        <div id="viewUpload" class="upload-area flex-1">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <h3 style="font-weight: 700; color: var(--medical-blue-dark); margin-bottom: 0.5rem;">Kéo thả hoặc nhấn để chọn ảnh</h3>
+                            <p style="color: var(--text-muted);">Hỗ trợ JPG, PNG, WEBP (Max 10MB)</p>
+                            <input type="file" id="fileInput" hidden accept="image/*">
+                        </div>
+
+                        <!-- Camera View -->
+                        <div id="viewCamera" class="hidden" style="flex: 1; display: flex; flex-direction: column;">
+                            <div class="camera-view-container" style="flex: 1;">
+                                <video id="webcam" autoplay playsinline style="height: 100%; object-fit: cover;"></video>
+                                <div class="camera-laser"></div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: center;">
+                                <button class="btn-pill btn-blue" id="btnCapture"><i class="fa-solid fa-camera-retro"></i> Chụp ảnh</button>
+                                <button class="btn-pill" id="btnFlipCamera" style="background:#f1f5f9; border: 1px solid var(--border-light);"><i class="fa-solid fa-rotate"></i> Đổi cam</button>
+                            </div>
+                        </div>
+
+                        <!-- Preview View -->
+                        <div id="viewPreview" class="hidden" style="flex: 1; display: flex; flex-direction: column;">
+                            <div class="preview-container" id="previewContainer" style="flex: 1;">
+                                <img src="" id="imgPreview" alt="Skin Lesion" style="height: 100%; object-fit: cover;">
+                                <div class="scan-laser"></div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                                <button class="btn-pill btn-blue" style="flex: 1; justify-content: center;" id="btnStartAnalyze"><i class="fa-solid fa-microscope"></i> Bắt đầu phân tích AI</button>
+                                <button class="btn-pill" style="background:#f1f5f9; border: 1px solid var(--border-light);" id="btnCancelPreview">Hủy</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Panel -->
+                    <div class="card-glass" id="scanResultsArea">
+                        <div class="card-header"><i class="fa-solid fa-stethoscope"></i> Báo cáo Chẩn đoán</div>
+                        
+                        <div id="resultEmpty" style="text-align: center; color: var(--text-muted); padding: 4rem 1rem;">
+                            <i class="fa-solid fa-robot fa-3x" style="opacity: 0.2; margin-bottom: 1.5rem;"></i>
+                            <p style="font-weight: 500;">Hệ thống AI đang chờ dữ liệu hình ảnh.</p>
+                        </div>
+
+                        <div id="resultContent" class="hidden">
+                            <div class="score-circle-container">
+                                <div>
+                                    <div id="riskScore">--</div>
+                                    <div class="score-badge" id="riskLevelBadge">Độ rủi ro</div>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 1.5rem;">
+                                <h4 style="font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-primary);">Top 3 Chẩn đoán AI:</h4>
+                                <div id="topPredictionsList" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <!-- Predictions Injected -->
+                                </div>
+                            </div>
+
+                            <div style="background: var(--bg-app); border-radius: var(--radius-md); border: 1px solid var(--border-light); padding: 1.25rem; margin-bottom: 1.5rem;">
+                                <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-primary);"><i class="fa-solid fa-dna" style="color: var(--medical-blue-base)"></i> Phân tích chuẩn ABCDE:</h4>
+                                <div id="abcdeChartContainer" style="display: flex; flex-direction: column; gap: 1rem;">
+                                    <!-- ABCDE Bars Injected JS -->
+                                </div>
+                            </div>
+
+                            <div style="background: var(--medical-blue-light); border-radius: var(--radius-md); padding: 1.25rem;">
+                                <h4 style="font-size: 0.95rem; margin-bottom: 0.5rem; color: var(--medical-blue-dark);"><i class="fa-solid fa-lightbulb"></i> Lời khuyên Y khoa:</h4>
+                                <p id="medicalAdvice" style="color: var(--medical-blue-dark);">Hệ thống đang chuẩn bị lời khuyên...</p>
+                            </div>
+
+                            <button class="btn-pill btn-blue w-100" style="justify-content: center; margin-top: 1.5rem; width: 100%; padding: 1rem;" id="btnConsultAI">
+                                <i class="fa-solid fa-comment-medical"></i> Tư vấn chi tiết với Bác sĩ AI
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="disclaimer-box">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.8rem;"></i>
+                    <div>
+                        <strong>MIỄN TRỪ TRÁCH NHIỆM Y TẾ:</strong>
+                        <p style="margin-top: 0.25rem;">Kết quả từ Skinderm AI chỉ mang tính chất tham khảo, hỗ trợ sàng lọc sớm. Ứng dụng này <strong>KHÔNG</strong> thay thế chẩn đoán lâm sàng của bác sĩ da liễu. Hãy đến cơ sở y tế nếu có dấu hiệu bất thường.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: MONITOR -->
+            <section id="sec-monitor" class="view-section">
+                <div class="welcome-header">
+                    <h1>Theo dõi Tiến triển</h1>
+                    <p style="color: var(--text-secondary)">So sánh và đánh giá sự thay đổi của nốt ruồi theo thời gian.</p>
+                </div>
+
+                <div class="card-glass" style="margin-bottom: 2rem;">
+                    <div class="card-header"><i class="fa-solid fa-chart-line"></i> Biểu đồ xu hướng rủi ro</div>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="monitorTrendChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card-glass">
+                    <div class="card-header"><i class="fa-solid fa-images"></i> So sánh song song (Side-by-Side)</div>
+                    <div id="compareEmpty" style="text-align: center; padding: 4rem; color: var(--text-muted); background: #f8fafc; border-radius: 16px; border: 1px dashed var(--border-light);">
+                        <i class="fa-solid fa-code-compare fa-2x mb-2"></i>
+                        <p>Vui lòng chọn 2 ảnh từ Lịch sử để thực hiện so sánh.</p>
+                    </div>
+                    <div class="monitor-compare-grid hidden" id="compareGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div style="background: var(--bg-app); padding: 1rem; border-radius: 16px;">
+                            <p id="compDate1" style="font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; color: var(--medical-blue-dark);">Ngày: --</p>
+                            <img id="compImg1" src="" style="width: 100%; border-radius: 12px; box-shadow: var(--shadow-sm);">
+                        </div>
+                        <div style="background: var(--bg-app); padding: 1rem; border-radius: 16px;">
+                            <p id="compDate2" style="font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; color: var(--medical-blue-dark);">Ngày: --</p>
+                            <img id="compImg2" src="" style="width: 100%; border-radius: 12px; box-shadow: var(--shadow-sm);">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: HISTORY -->
+            <section id="sec-history" class="view-section">
+                <div class="welcome-header">
+                    <h1>Lịch sử Phân tích</h1>
+                    <p style="color: var(--text-secondary)">Xem lại toàn bộ hồ sơ quét da của bạn.</p>
+                </div>
+
+                <div class="history-table-container">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Hình ảnh</th>
+                                <th>Ngày giờ</th>
+                                <th>Chẩn đoán chính</th>
+                                <th>Mức rủi ro</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <!-- Rows Injected JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECTION: SETTINGS -->
+            <section id="sec-settings" class="view-section">
+                <div class="welcome-header">
+                    <h1 data-i18n="settings_title">Cài đặt Ứng dụng</h1>
+                    <p style="color: var(--text-secondary)" data-i18n="settings_desc">Tùy chỉnh trải nghiệm cá nhân.</p>
+                </div>
+                <div class="card-glass" style="max-width: 700px; display: flex; flex-direction: column; gap: 1.5rem;">
+                    
+                    <!-- Dark Mode Toggle -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 1.5rem;">
+                        <div>
+                            <strong style="font-size: 1.05rem; color: var(--text-primary);" data-i18n="settings_theme">Chế độ tối (Dark Mode)</strong>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;" data-i18n="settings_theme_desc">Giảm chói mắt khi sử dụng vào ban đêm.</p>
+                        </div>
+                        <div class="toggle-switch-container">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggleDarkMode">
+                                <div class="switch-bg"><div class="switch-knob"></div></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Language Select -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 1.5rem;">
+                        <div>
+                            <strong style="font-size: 1.05rem; color: var(--text-primary);" data-i18n="settings_lang">Ngôn ngữ hiển thị</strong>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;" data-i18n="settings_lang_desc">Thay đổi ngôn ngữ giao diện Skinderm.</p>
+                        </div>
+                        <select id="langSelect" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-light); background: var(--bg-app); font-weight: 500; outline: none; color: var(--text-primary); cursor: pointer;">
+                            <option value="vi">Tiếng Việt</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Clear Data -->
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="font-size: 1.05rem; color: var(--danger);" data-i18n="settings_clear">Xóa dữ liệu cá nhân</strong>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;" data-i18n="settings_clear_desc">Xóa toàn bộ lịch sử thiết lập trên trình duyệt này.</p>
+                        </div>
+                        <button class="btn-pill" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: none; padding: 8px 16px; font-weight: 600;" id="btnClearData" data-i18n="btn_clear">Xóa lịch sử</button>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- SECTION: ACCOUNT -->
+            <section id="sec-account" class="view-section">
+                <div class="welcome-header">
+                    <h1 data-i18n="account_title">Tài khoản của tôi</h1>
+                    <p style="color: var(--text-secondary)" data-i18n="account_desc">Quản lý hồ sơ và bảo mật.</p>
+                </div>
+                <div class="card-glass" style="max-width: 600px; margin: 0 auto; padding: 3rem 2rem;">
+                    <div style="text-align: center; margin-bottom: 2.5rem;">
+                        <div style="width: 120px; height: 120px; background: var(--border-light); border-radius: 50%; margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; color: var(--text-muted); border: 4px solid var(--bg-app); box-shadow: var(--shadow-md);">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <h2 id="accName" style="font-weight: 800; font-size: 1.5rem; color: var(--text-primary);">Người dùng</h2>
+                        <p id="accEmail" style="color: var(--text-secondary); font-size: 0.95rem;">user@example.com</p>
+                        <span class="pill pill-success" style="margin-top: 10px; display: inline-block; background: rgba(16, 185, 129, 0.1);" data-i18n="account_pro">Thành viên Tiêu chuẩn</span>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <button class="btn-pill" style="background: var(--medical-blue-light); color: var(--medical-blue-dark); border: none; justify-content: center; font-size: 1rem; padding: 1rem;" data-i18n="btn_edit_profile">
+                            <i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa hồ sơ
+                        </button>
+                        <button class="btn-pill" style="background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-light); justify-content: center; font-size: 1rem; padding: 1rem;" data-i18n="btn_change_pass">
+                            <i class="fa-solid fa-key"></i> Đổi mật khẩu
+                        </button>
+                        <button class="btn-pill" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: none; justify-content: center; font-size: 1rem; padding: 1rem; margin-top: 1rem;" id="btnLogout">
+                            <i class="fa-solid fa-right-from-bracket"></i> <span data-i18n="btn_logout">Đăng xuất</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <div class="version-tag" style="text-align: center; padding: 2rem 0; color: var(--text-muted); font-size: 0.8rem; font-weight: 500;">
+                Skinderm AI Version 2.0.0
+            </div>
+        </main>
+    </div>
+
+    <!-- DOCTOR AI CHAT (FULLSCREEN OVERLAY) -->
+    <section id="sec-doctor" class="view-section">
+        <div class="chat-container-fullscreen">
+            <!-- Chat Header -->
+            <div class="chat-header-bar">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <i class="fa-solid fa-arrow-left btn-back-doctor" id="btnBackFromDoctor"></i>
+                    <div class="logo-icon" style="width: 36px; height: 36px; background: transparent;"><img src="assets/img/logo.png" alt="AI"></div>
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Bác sĩ Skinderm AI</h3>
+                        <p style="font-size: 0.75rem; color: var(--medical-blue-base); font-weight: 600;">Sẵn sàng tư vấn</p>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <!-- Thinking Process Toggle -->
+                    <div class="toggle-switch-container">
+                        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Phân tích sâu</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggleThinking" checked>
+                            <div class="switch-bg"><div class="switch-knob"></div></div>
+                        </label>
+                    </div>
+
+                    <!-- Model Select -->
+                    <select id="chatModelSelect" style="border: 1px solid var(--border-light); border-radius: 12px; padding: 8px 16px; font-size: 0.85rem; font-weight: 600; background: #f8fafc; outline: none; cursor: pointer;">
+                        <option value="minimaxai/minimax-m2.7">Skinderm o1</option>
+                        <option value="z-ai/glm5">Skinderm Pro</option>
+                        <option value="google/gemma-4-31b-it">Skinderm Turbo</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Chat History -->
+            <div id="chatHistory" class="chat-history-immersive">
+                <!-- Welcome Screen -->
+                <div id="chatWelcome" class="chat-welcome-screen">
+                    <div class="welcome-logo-video">
+                        <video src="assets/video/logo.mp4" autoplay loop muted playsinline></video>
+                    </div>
+                    <div>
+                        <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 0.75rem;">Skinderm AI xin chào</h2>
+                        <p style="color: var(--text-secondary); max-width: 500px; line-height: 1.6; font-size: 1.05rem;">Tôi là trợ lý AI chuyên môn da liễu. Bạn muốn phân tích ảnh chụp hay tìm hiểu về vấn đề gì hôm nay?</p>
+                    </div>
+                    
+                    <div class="suggestion-grid">
+                        <div class="suggestion-chip" data-query="Dấu hiệu nhận biết ung thư da hắc tố?">
+                            <strong style="color: var(--medical-blue-dark);"><i class="fa-solid fa-magnifying-glass"></i> Ung thư hắc tố</strong>
+                            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 6px;">Tìm hiểu các dấu hiệu nhận biết sớm.</p>
+                        </div>
+                        <div class="suggestion-chip" data-query="Làm sao để bảo vệ da khỏi tia UV hiệu quả?">
+                            <strong style="color: var(--success);"><i class="fa-solid fa-sun"></i> Bảo vệ khỏi UV</strong>
+                            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 6px;">Các biện pháp chống nắng an toàn.</p>
+                        </div>
+                        <div class="suggestion-chip" data-query="Bạn có thể giải thích quy tắc chẩn đoán ABCDE không?">
+                            <strong style="color: var(--warning);"><i class="fa-solid fa-ruler-combined"></i> Quy tắc ABCDE</strong>
+                            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 6px;">Tiêu chuẩn đánh giá nốt ruồi.</p>
+                        </div>
+                        <div class="suggestion-chip" data-query="Dưỡng da cho người hay tiếp xúc ánh nắng?">
+                            <strong style="color: #8b5cf6;"><i class="fa-solid fa-spa"></i> Dưỡng da cơ bản</strong>
+                            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 6px;">Lời khuyên chăm sóc da hàng ngày.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Input (Gemini Style) -->
+            <div class="chat-input-wrapper">
+                <div class="chat-input-container">
+                    <button class="btn-icon" title="Tải ảnh lên" id="btnChatUpload">
+                        <i class="fa-solid fa-circle-plus"></i>
+                    </button>
+                    
+                    <textarea id="chatInput" class="chat-input-field" placeholder="Hỏi Skinderm AI về vấn đề da liễu..." rows="1"></textarea>
+                    
+                    <div style="display: flex; gap: 4px; align-items: center; padding-bottom: 2px;">
+                        <button class="btn-icon" title="Nhập bằng giọng nói" id="btnChatVoice">
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
+                        <button id="btnSendMessage" class="btn-icon btn-send">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </button>
+                    </div>
+                </div>
+                <p style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem;">
+                    Skinderm AI có thể mắc sai lầm. Hãy kiểm tra lại các thông tin quan trọng với bác sĩ da liễu.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SCAN DETAIL MODAL -->
+    <div id="scanDetailModal" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 2000; display: flex; align-items: center; justify-content: center;">
+        <div class="modal-content card-glass fade-in" style="width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; background: white;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 1rem;">
+                <h3 style="font-size: 1.25rem; font-weight: 700;"><i class="fa-solid fa-file-medical"></i> Báo cáo Chi tiết</h3>
+                <button class="btn-icon" id="btnCloseModal" style="background: #f1f5f9;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP JS -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

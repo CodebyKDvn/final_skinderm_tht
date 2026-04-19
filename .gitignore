@@ -5,11 +5,20 @@ __pycache__/
 venv/
 .env
 
+# Credentials & Sensitive Files
+*firebase-adminsdk*.json
+serviceaccount.json
+*.pem
+
 # Large models are now managed by Git LFS (.gitattributes)
 
-# Logs
+# Logs & Outputs
 backend/logs/
+docs/model_check.txt
+*.log
 
-# IDE files
+# IDE & AI tools
 .vscode/
 .idea/
+.qodo/
+.sixth/

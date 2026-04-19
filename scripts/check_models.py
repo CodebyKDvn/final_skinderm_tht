@@ -1,11 +1,12 @@
+import os
 import requests
 
 headers = {
-    "Authorization": "Bearer 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",
+    "Authorization": f"Bearer {os.getenv('NVIDIA_API_KEY')}",
     "Accept": "application/json"
 }
 
-with open("../backend/model_check.txt", "w") as f:
+with open("../docs/model_check.txt", "w") as f:
     try:
         response = requests.get("https://integrate.api.nvidia.com/v1/models", headers=headers)
         f.write(f"Status: {response.status_code}\n\n")

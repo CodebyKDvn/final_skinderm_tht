@@ -2,26 +2,27 @@
    VARIABLES & DESIGN TOKENS
    ========================================= */
 :root {
-    --bg-dark: #09090b; /* Deep zinc background for contrast */
-    --text-primary: #fafafa;
-    --text-secondary: #a1a1aa;
+    --bg-dark: #f6f5f7; /* Light mode default */
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
     
-    /* Titanium / Glassmorphism Colors */
-    --glass-bg: rgba(255, 255, 255, 0.02);
-    --glass-border: rgba(255, 255, 255, 0.05);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-    --blue-glow: rgba(212, 212, 216, 0.1); /* Soft silver glow */
-    --accent-blue: #e4e4e7; /* Zinc 200 / Silver */
+    /* Solid Colors for Light Mode */
+    --glass-bg: #ffffff;
+    --glass-border: #e5e7eb;
+    --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     
-    /* Explicit Titanium Colors */
-    --titanium-light: #f4f4f5;
-    --titanium-base: #d4d4d8;
-    --titanium-dark: #71717a;
+    /* Accent */
+    --accent-blue: #2563eb;
     
     /* Luxurious Medical Blue */
-    --medical-blue-light: #7dd3fc;
-    --medical-blue-base: #0ea5e9;
-    --medical-blue-dark: #0284c7;
+    --medical-blue-light: #60a5fa;
+    --medical-blue-base: #2563eb;
+    --medical-blue-dark: #1d4ed8;
+    
+    /* Semantic Colors */
+    --color-benign: #10b981;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
     
     /* Typography */
     --font-main: 'Inter', sans-serif;
@@ -81,25 +82,18 @@ a {
 }
 
 /* =========================================
-   NAVBAR (GLASSMORPHISM PILL)
+   NAVBAR & SIDEBAR
    ========================================= */
 .navbar {
     position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 1000px;
+    top: 0;
+    left: 0;
+    width: 100%;
     z-index: 1000;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 50px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    background: var(--glass-bg);
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     transition: var(--transition-smooth);
-    /* Entry animation */
-    animation: slideDownNav 1s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
 }
 
 @keyframes slideDownNav {
@@ -218,41 +212,10 @@ a {
 }
 
 /* =========================================
-   GLOBAL VIDEO BACKGROUND
+   GLOBAL BACKGROUND
    ========================================= */
 .global-bg {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -2;
-    overflow: hidden;
-}
-
-.hero-video {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    min-width: 100%;
-    min-height: 100%;
-    width: auto;
-    height: auto;
-    transform: translate(-50%, -50%);
-    object-fit: cover;
-    opacity: 0.85; /* Làm rực rỡ và sáng hơn so với cũ (0.6) */
-}
-
-.hero-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    /* Gradient trong suốt hơn để video luôn nổi bật và sáng */
-    background: linear-gradient(180deg, rgba(5,5,5,0.3) 0%, rgba(5,5,5,0.1) 50%, rgba(5,5,5,0.4) 100%);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    display: none; /* Hide video background */
 }
 
 /* =========================================
@@ -534,19 +497,15 @@ a {
 .glass-card {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    border-radius: 16px;
+    border-radius: 12px;
     padding: 2.5rem 2rem;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     transition: var(--transition-smooth);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    box-shadow: var(--glass-shadow);
 }
 
 .glass-card:hover {
-    transform: translateY(-8px);
-    border-color: rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
 
 /* =========================================

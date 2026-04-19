@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -20,8 +20,65 @@ from torchvision import transforms
 import torchvision.transforms.functional as TF
 from PIL import Image
 import io
+import os
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from firebase_admin_utils import firebase_auth_manager
+from openai import OpenAI
+from apscheduler.schedulers.background import BackgroundScheduler
+from explore_agent import run_explore_workflow, get_latest_blogs
+import threading
 
-app = FastAPI(title="SkinGuardAI Backend API", version="1.0.0")
+# Load environment variables from .env file
+load_dotenv()
+
+app = FastAPI(title="SkindermAI Backend API", version="1.0.0")
+
+# --- NVIDIA AI Client ---
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
+nv_client = OpenAI(
+  base_url = "https://integrate.api.nvidia.com/v1",
+  api_key = NVIDIA_API_KEY,
+  timeout = 30.0,
+  max_retries = 0
+)
+
+# --- Supabase Initialization ---
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+supabase: Client = None
+admin_supabase: Client = None
+
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        # Standard client
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        
+        # Admin Client for backend operations (bypasses RLS)
+        if SUPABASE_SERVICE_KEY:
+            admin_supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+            print(f"[OK] Supabase Admin Client initialized (RLS Bypass active).")
+        else:
+            print(f"[WARN] SUPABASE_SERVICE_ROLE_KEY not found. RLS might block inserts.")
+            
+        # Use Admin client if available for bucket management
+        db_admin = admin_supabase if admin_supabase else supabase
+        try:
+            # Ensure bucket exists
+            buckets = db_admin.storage.list_buckets()
+            bucket_names = [b.name for b in buckets]
+            if "mole-images" not in bucket_names:
+                db_admin.storage.create_bucket("mole-images", options={"public": True})
+                print("[OK] Created missing Supabase bucket: 'mole-images'")
+            else:
+                print("[OK] Verified Supabase bucket: 'mole-images'")
+        except Exception as be:
+            print(f"[WARN] Could not verify/create bucket: {be}")
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize Supabase: {e}")
+else:
+    print("[WARN] SUPABASE_URL or SUPABASE_KEY missing in .env. Storage features disabled.")
 
 # Configure CORS
 app.add_middleware(
@@ -289,9 +346,58 @@ def process_image(image_bytes: bytes):
         
     return int(predicted.item()), float(confidence.item()), bbox, top3
 
+def get_current_user(authorization: str = Form(None)):
+    """Helper to verify Firebase token from Form data or Header."""
+    if not authorization:
+        return None
+    
+    token = authorization.replace("Bearer ", "")
+    user = firebase_auth_manager.verify_id_token(token)
+    return user
+
+@app.on_event("startup")
+def startup_event():
+    # Run once initially in background
+    threading.Thread(target=run_explore_workflow, daemon=True).start()
+    
+    # Schedule to run every 1 hour
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(run_explore_workflow, 'interval', hours=1)
+    scheduler.start()
+    print("[Scheduler] LangGraph Explore Agent started.")
+
 @app.get("/")
 def read_root():
     return {"status": "ok", "message": "SkinGuardAI API is running"}
+
+@app.get("/api/explore")
+async def get_explore_content(language: str = "vi"):
+    """Fetch cached LangGraph blog posts."""
+    blogs = get_latest_blogs()
+    if not blogs:
+        # Fallback if somehow empty or still loading
+        blogs = [
+            { "category": "Khởi tạo", "title": "Hệ thống đang phân tích xu hướng", "desc": "Các bài viết mới đang được AI tổng hợp bằng LangGraph. Vui lòng tải lại trang sau ít phút.", "img": "https://images.unsplash.com/photo-1551076805-e1869033e561" }
+        ]
+    return {"status": "success", "data": blogs}
+
+@app.post("/api/history")
+async def get_user_history(authorization: str = Form(...)):
+    user = get_current_user(authorization)
+    if not user:
+        return {"status": "error", "message": "Unauthorized"}, 401
+    
+    
+    user_id = user['uid']
+    db = admin_supabase if admin_supabase else supabase
+    if not db:
+        return {"status": "error", "message": "Supabase not configured"}, 500
+        
+    try:
+        response = db.table("analysis_records").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        return {"status": "success", "data": response.data}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
 
 class AnalyzeResponse(BaseModel):
     risk_score: float
@@ -302,7 +408,13 @@ class AnalyzeResponse(BaseModel):
     top3: list
 
 @app.post("/api/analyze", response_model=AnalyzeResponse)
-async def analyze_image(file: UploadFile = File(...)):
+async def analyze_image(
+    file: UploadFile = File(...), 
+    authorization: str = Form(None),
+    uv_index: float = Form(None),
+    temperature: float = Form(None),
+    location: str = Form(None)
+):
     contents = await file.read()
     
     # Run Pipeline
@@ -317,30 +429,17 @@ async def analyze_image(file: UploadFile = File(...)):
         else:
             base_risk = round((1.0 - confidence) * 100, 1)
             
+        # More realistic ABCDE logic based on classification and confidence
+        is_malignant = "MEL" in classification or "BCC" in classification or "SCC" in classification
+        
+        # A_score (Asymmetry): Malignant lesions are usually more asymmetric
+        a_base = 75 if is_malignant else 20
         abcde_scores = {
-            "A_score": random.randint(70, 95) if base_risk > 50 else random.randint(10, 40),
-            "B_score": random.randint(60, 90) if base_risk > 50 else random.randint(10, 30),
-            "C_score": random.randint(50, 90),
-            "D_score": random.randint(40, 90),
-            "E_score": random.randint(50, 90)
-        }
-    else:
-        # Fallback Mock logic
-        base_risk = random.randint(30, 95)
-        confidence = round(random.uniform(85.0, 99.5), 2)
-        if base_risk > 75:
-            classification = "MEL (Suspected Melanoma)"
-        elif base_risk > 50:
-            classification = "Atypical Nevus"
-        else:
-            classification = "NV (Benign Mole)"
-            
-        abcde_scores = {
-            "A_score": random.randint(10, 90),
-            "B_score": random.randint(10, 95),
-            "C_score": random.randint(20, 80),
-            "D_score": random.randint(40, 90),
-            "E_score": 10
+            "A_score": min(98, max(5, a_base + random.randint(-15, 15))),
+            "B_score": min(98, max(5, (80 if is_malignant else 30) + random.randint(-20, 10))),
+            "C_score": min(98, max(5, (70 if "MEL" in classification else 40) + random.randint(-10, 20))),
+            "D_score": min(98, max(5, random.randint(30, 90))),
+            "E_score": min(98, max(5, random.randint(10, 60)))
         }
         bbox = {"x": 0.2, "y": 0.2, "w": 0.6, "h": 0.6}
         top3 = [
@@ -348,11 +447,70 @@ async def analyze_image(file: UploadFile = File(...)):
             {"label": "Other prediction 1", "score": round((1 - confidence) * 50, 2)},
             {"label": "Other prediction 2", "score": round((1 - confidence) * 30, 2)},
         ]
+
+    # --- Save to Supabase if User is Auth ---
+    user = get_current_user(authorization)
+    db = admin_supabase if admin_supabase else supabase
+    if user and db:
+        try:
+            user_id = user['uid']
+            filename = f"{user_id}/{int(time.time())}_{file.filename}"
+            # Upload to 'mole-images' bucket using Admin client to bypass RLS
+            # Bắt buộc khai báo content-type để không bị lỗi 400 Invalid Mime Type
+            content_type = file.content_type if file.content_type else "image/jpeg"
+            db.storage.from_("mole-images").upload(
+                filename, 
+                contents,
+                file_options={"content-type": content_type}
+            )
+            image_url = db.storage.from_("mole-images").get_public_url(filename)
+
+            # Insert into 'scans' table
+            scan_data = {
+                "user_id": user_id,
+                "image_url": image_url,
+                "risk_score": base_risk,
+                "classification": classification,
+                "confidence": round(confidence * 100 if result else confidence, 2),
+                "abcde": abcde_scores,
+                "top3": top3,
+                "uv_index": uv_index,
+                "temperature": temperature,
+                "location": location
+            }
+            # Insert into 'analysis_records' table using Admin client to bypass RLS
+            db.table("analysis_records").insert(scan_data).execute()
+            print(f"[OK] Scan saved to Supabase (User: {user_id}, Table: analysis_records, Client: {'Admin' if admin_supabase else 'Anon'})")
+        except Exception as e:
+            print(f"[ERROR] Failed to save to Supabase: {e}")
     
+    # --- Generate Medical Advice using AI ---
+    advice_prompt = (
+        f"Phân tích kết quả scan da: Chẩn đoán là {classification} với độ tin cậy {confidence*100:.1f}%. "
+        f"Mức độ rủi ro tổng thể: {base_risk}%. "
+        "Hãy đưa ra lời khuyên y khoa ngắn gọn (2-3 câu), chuyên nghiệp nhưng dễ hiểu cho bệnh nhân. "
+        "Nhấn mạnh vào việc theo dõi hoặc đi khám nếu cần thiết. Trả lời bằng tiếng Việt."
+    )
+    
+    medical_advice = "Hệ thống đang chuẩn bị lời khuyên..."
+    try:
+        advice_res = nv_client.chat.completions.create(
+            model="meta/llama-3.1-8b-instruct",
+            messages=[{"role": "user", "content": advice_prompt}],
+            max_tokens=256,
+            temperature=0.3,
+            stream=False
+        )
+        medical_advice = advice_res.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"[WARN] Failed to generate AI advice: {e}")
+        medical_advice = "Cảnh báo: AI phát hiện dấu hiệu bất thường. Hãy đặt lịch hẹn với bác sĩ da liễu để kiểm tra chi tiết." if base_risk > 50 else "Kết quả cho thấy nguy cơ thấp. Hãy tiếp tục theo dõi định kỳ."
+
     return {
         "risk_score": base_risk,
         "classification": classification,
         "confidence": round(confidence * 100 if result else confidence, 2),
+        "medical_advice": medical_advice,
         "abcde": {
             "A_asymmetry": {
                 "score": abcde_scores["A_score"],
@@ -387,71 +545,51 @@ class ChatRequest(BaseModel):
     context: str = ""
 
 @app.post("/api/chat")
-def chat_interaction(chat_req: ChatRequest):
-    invoke_url = "https://integrate.api.nvidia.com/v1/chat/completions"
-    headers = {
-        "Authorization": "Bearer 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",
-        "Accept": "text/event-stream"
-    }
-
+async def chat_interaction(chat_req: ChatRequest, request: Request):
     system_prompt = (
-        "Bạn là Bác sĩ Trưởng khoa Chuyên ngành Da liễu & Giải phẫu bệnh lý (DermAI Vision). "
-        "Nhiệm vụ của bạn là cung cấp các phân tích có tính CHUYÊN MÔN CAO, CHUẨN XÁC KHOA HỌC và DỰA TRÊN BẰNG CHỨNG (Evidence-Based Medicine) cho bệnh nhân về các tổn thương da.\n\n"
-        "--- NGUYÊN TẮC CẦN SỰ ĐÚNG ĐẮN VỀ KHOA HỌC ---\n"
-        "1. **Phân tích chi tiết**: Bạn phải giải thích rõ các đặc trưng về mặt hình thái học (Morphology) như Màu sắc (Color hyper/hypo-pigmentation), Đường viền (Border irregularity), Độ bất đối xứng (Asymmetry). Nếu có dữ liệu ABCDE, hãy bám sát nó.\n"
-        "2. **Giải thích thuật ngữ**: Khi dùng thuật ngữ y khoa (ví dụ: tế bào hắc tố Melanocytes, lớp đáy Epidermis, tăng sinh mạch máu Vascularization), hãy giải thích ngắn gọn khoa học.\n"
-        "3. **Thái độ khách quan & Điềm tĩnh**: Trả lời tự tin, chắc chắn về mặt lý thuyết khoa học dựa trên số liệu nhưng không khẳng định 100% bệnh khi chưa có sinh thiết thực tế. Tuyệt đối không phỏng đoán mơ hồ.\n"
-        "4. **Cấu trúc rành mạch**: Sử dụng các đề mục tiêu chuẩn: [ĐÁNH GIÁ TỔNG QUAN], [PHÂN TÍCH LÝ THUYẾT & ABCDE], [HƯỚNG DẪN LÂM SÀNG THEO DÕI].\n"
-        "5. **Lời khuyên thực tế**: Luôn nhấn mạnh Tiêu chuẩn vàng (Gold Standard) là sinh thiết cắt bỏ (Excisional biopsy) nếu có nghi ngờ Malignant.\n\n"
-        f"--- Diagnosis Context (Dữ liệu chẩn đoán của bệnh nhân) ---\n{chat_req.context}"
+        "Bạn là Bác sĩ Trưởng khoa Chuyên ngành Da liễu (DermAI Vision). "
+        "Hãy trả lời bằng tiếng Việt, phong cách chuyên nghiệp, tận tâm. "
+        "Dựa trên dữ liệu chẩn đoán sau: " + chat_req.context
     )
-    
-    payload = {
-        "model": chat_req.model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"User query (Respond in {'Vietnamese' if chat_req.language == 'vi' else 'English'}): {chat_req.message}"}
-        ],
-        "max_tokens": 4096, # max response tokens allowed, context is managed by model
-        "temperature": 0.4, # Lower temperature for strictly scientific answers
-        "top_p": 0.9,
-        "stream": True,
-        "chat_template_kwargs": {"thinking":True},
-    }
 
-    def generate_events():
-        max_retries = 2
-        for attempt in range(max_retries + 1):
-            try:
-                response = requests.post(invoke_url, headers=headers, json=payload, stream=True, timeout=(10, 120))
-                response.raise_for_status()
-                for line in response.iter_lines():
-                    if line:
-                        decoded_line = line.decode("utf-8")
-                        yield f"{decoded_line}\n\n"
-                return  # Thành công thì thoát
-            except requests.exceptions.Timeout as e:
-                print(f"API Timeout (attempt {attempt+1}/{max_retries+1}): {e}")
-                if attempt < max_retries:
-                    time.sleep(1)
-                    continue
-            except requests.exceptions.HTTPError as e:
-                status = e.response.status_code if e.response else 0
-                print(f"API HTTP {status} Error (attempt {attempt+1}/{max_retries+1}): {e}")
-                # Retry cho lỗi 5xx (server tạm thời lỗi)
-                if status >= 500 and attempt < max_retries:
-                    time.sleep(2)
-                    continue
-                break
-            except Exception as e:
-                print(f"API Error: {e}")
-                break
-        
-        msg = "Lỗi kết nối tới Server AI. Vui lòng thử lại sau." if chat_req.language == "vi" else "AI Server error. Please try again later."
-        yield f'data: {{"error": "{msg}"}}\n\n'
+    async def generate_events():
+        try:
+            completion = nv_client.chat.completions.create(
+                model=chat_req.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": chat_req.message}
+                ],
+                temperature=0.4,
+                top_p=0.9,
+                max_tokens=4096, # Set to reasonable limit
+                stream=True,
+                timeout=180.0
+            )
+
+            for chunk in completion:
+                # Check if client is still there
+                if await request.is_disconnected():
+                    print("[INFO] Client disconnected. Stopping generation.")
+                    break
+
+                try:
+                    if not getattr(chunk, "choices", None): continue
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        data = {"choices": [{"delta": {"content": content}}]}
+                        yield f"data: {json.dumps(data)}\n\n"
+                except Exception:
+                    break
+
+            yield "data: [DONE]\n\n"
+
+        except Exception as e:
+            print(f"Streaming Error: {e}")
+            yield f'data: {{"error": "{str(e)}"}}\n\n'
 
     return StreamingResponse(generate_events(), media_type="text/event-stream")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
