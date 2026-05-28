@@ -1,3 +1,20 @@
+:root {
+    /* Backgrounds */
+    --bg-main: #0A0A0C; /* Đen có chút ánh xanh/tím siêu nhẹ */
+    --bg-secondary: rgba(255, 255, 255, 0.02);
+    
+    /* Text */
+    --text-primary: #F5F5F7; /* Trắng sữa của Apple */
+    --text-secondary: #86868B; /* Xám đặc trưng của thiết bị Apple */
+    
+    /* Accents - Dùng cho các điểm nhấn */
+    --accent-glow: rgba(168, 237, 213, 0.4); /* Xanh của Skinderm */
+    
+    /* Font (Vô cùng quan trọng) */
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+}
+
 /* =========================================
    VARIABLES & DESIGN TOKENS
    ========================================= */
@@ -85,65 +102,77 @@ a {
    ========================================= */
 .navbar {
     position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 1000px;
+    top: 40px; /* Offset for announcement bar */
+    left: 0;
+    width: 100%;
     z-index: 1000;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 50px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    background: transparent;
     transition: var(--transition-smooth);
-    /* Entry animation */
-    animation: slideDownNav 1s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
+}
+
+.announcement-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    background: #f7fee7; /* Very light lime */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    font-size: 0.85rem;
+    color: #3f6212;
+    font-weight: 500;
+}
+
+.announcement-bar a {
+    margin-left: 10px;
+    color: #1a2e05;
+    font-weight: 700;
+    text-decoration: underline;
 }
 
 @keyframes slideDownNav {
-    from { transform: translate(-50%, -100px); opacity: 0; }
-    to { transform: translate(-50%, 0); opacity: 1; }
+    from { transform: translateY(-100px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
 .nav-container {
-    padding: 0.8rem 2rem;
+    padding: 1rem 5%;
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.nav-left, .nav-right {
+    flex: 1;
+}
+
+.nav-center {
+    flex: 2;
+    display: flex;
+    justify-content: center;
+}
+
+.nav-right {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1.5rem;
     align-items: center;
 }
 
 .logo {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 700;
     letter-spacing: -0.5px;
-    display: inline-block;
-    transition: transform 0.3s ease;
-}
-
-.logo:hover {
-    transform: scale(1.05);
-}
-
-.logo span {
-    font-weight: 300;
-    color: var(--medical-blue-light);
-    background: linear-gradient(90deg, var(--titanium-light), var(--medical-blue-light), var(--titanium-light));
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: shineText 4s linear infinite;
-}
-
-@keyframes shineText {
-    to { background-position: 200% center; }
+    color: #000; /* Dark logo as in image */
 }
 
 .nav-links {
     display: flex;
-    gap: 2rem;
+    gap: 1.5rem;
     align-items: center;
 }
 
@@ -218,17 +247,16 @@ a {
 }
 
 /* =========================================
-   GLOBAL VIDEO BACKGROUND
+   HERO BACKGROUND (LOCALIZED)
    ========================================= */
-.global-bg {
-    position: fixed;
+.hero-bg {
+    position: absolute;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -2;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
     overflow: hidden;
-    pointer-events: none; /* Add this to ensure it doesn't block interactions */
 }
 
 .hero-video {
@@ -241,7 +269,6 @@ a {
     height: auto;
     transform: translate(-50%, -50%);
     object-fit: cover;
-    opacity: 0.85; /* Làm rực rỡ và sáng hơn so với cũ (0.6) */
 }
 
 .hero-overlay {
@@ -250,11 +277,8 @@ a {
     left: 0;
     width: 100%;
     height: 100%;
-    /* Gradient slightly darker on the left to pop the text */
-    background: linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 50%, transparent 100%);
-    backdrop-filter: blur(2px); /* Very subtle blur for text clarity */
-    -webkit-backdrop-filter: blur(2px);
-    pointer-events: none; /* Ensure overlay doesn't block clicks */
+    background: radial-gradient(circle, transparent 0%, rgba(255,255,255,0.8) 100%);
+    pointer-events: none;
 }
 
 /* =========================================
@@ -266,27 +290,15 @@ a {
     width: 100vw;
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* Aligned to left like sample */
-    padding-left: 8%; /* Spacing from edge */
+    justify-content: center; /* Centered */
+    text-align: center;
     overflow: hidden;
-}
-
-/* Subtle line at the bottom of hero like sample image */
-.hero-section::after {
-    content: '';
-    position: absolute;
-    bottom: 80px;
-    left: 8%;
-    right: 8%;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.15);
-    z-index: 1;
+    background: #fff; /* Fallback */
 }
 
 .hero-content {
-    text-align: left; /* Text alignment left */
     z-index: 1;
-    max-width: 650px;
+    max-width: 800px;
     padding: 0 2rem;
 }
 
@@ -306,24 +318,19 @@ a {
 }
 
 .hero-title {
-    font-size: clamp(3rem, 7vw, 5.5rem);
-    font-weight: 600;
-    line-height: 1.05;
+    font-size: clamp(3.5rem, 8vw, 6.5rem);
+    font-weight: 500; /* Cleaner weight as in image */
+    line-height: 1;
     margin-bottom: 2rem;
-    letter-spacing: -2px;
-    color: #ffffff; /* Pure white for maximum impact */
-    /* Stronger, more refined shadow for readability on bright backgrounds */
-    text-shadow: 0 4px 30px rgba(0,0,0,0.3), 0 0 100px rgba(0,0,0,0.1); 
+    letter-spacing: -3px;
+    color: #111; /* Dark text for light bg */
 }
 
 .gradient-text {
-    /* Subtle warm white gradient to match skin-care aesthetic */
-    background: linear-gradient(135deg, #ffffff 0%, #fff0e6 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    display: inline-block;
-    filter: drop-shadow(0 2px 10px rgba(0,0,0,0.1));
+    color: #111;
+    background: none;
+    -webkit-text-fill-color: initial;
+    display: inline;
 }
 
 .cursor {
@@ -340,21 +347,42 @@ a {
 }
 
 .hero-desc {
-    font-size: clamp(1rem, 2vw, 1.1rem);
-    color: #ffffff; /* High contrast white */
-    opacity: 0.95;
-    margin-bottom: 3.5rem;
-    max-width: 500px;
-    text-shadow: 0 2px 15px rgba(0,0,0,0.4); /* Added visibility shadow */
-    line-height: 1.7;
+    font-size: 1.25rem;
+    color: #444; 
+    margin-bottom: 3rem;
+    max-width: 650px;
+    line-height: 1.5;
     font-weight: 400;
 }
 
 .hero-actions {
     display: flex;
-    gap: 1.5rem;
-    justify-content: flex-start; /* Actions also left-aligned */
+    gap: 1rem;
+    justify-content: center;
     flex-wrap: wrap;
+}
+
+.btn-dark {
+    background: #000;
+    color: #fff;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+}
+
+.btn-white {
+    background: #fff;
+    color: #000;
+    border: 1px solid #ddd;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+}
+
+.btn-text {
+    color: #000;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
 }
 
 .btn {

@@ -3,32 +3,39 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DermAI Vision - Initialized");
 
+    // Slow down the hero video and loop first 4 seconds
+    const video = document.getElementById('hero-video');
+    if (video) {
+        video.playbackRate = 0.55; 
+        
+        // Loop the video within the first 4 seconds
+        video.addEventListener('timeupdate', () => {
+            if (video.currentTime >= 4) {
+                video.currentTime = 0;
+            }
+        });
+    }
+
     // Xử lý hiệu ứng Navbar khi cuộn trang
     const navbar = document.querySelector('.navbar');
     
     window.addEventListener('scroll', () => {
         if (window.scrollY > 50) {
-            navbar.style.background = 'rgba(5, 5, 5, 0.7)';
-            navbar.style.boxShadow = '0 10px 40px rgba(0, 0, 0, 0.4)';
-            navbar.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+            navbar.classList.add('navbar-liquid');
         } else {
-            navbar.style.background = 'rgba(255, 255, 255, 0.05)';
-            navbar.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
-            navbar.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+            navbar.classList.remove('navbar-liquid');
         }
     });
 
-    // Scroll Spy (Quăng class active theo khu vực)
+    // Scroll Spy
     const sections = document.querySelectorAll('header, section');
-    const navLinks = document.querySelectorAll('.nav-links a:not(.btn-demo)');
+    const navLinks = document.querySelectorAll('.nav-links a');
 
     window.addEventListener('scroll', () => {
         let current = '';
-
         sections.forEach(section => {
             const sectionTop = section.offsetTop;
             const sectionHeight = section.clientHeight;
-            // Cho phép kích hoạt khi cuộn đến 1/3 section
             if (scrollY >= (sectionTop - sectionHeight / 3)) {
                 current = section.getAttribute('id');
             }
@@ -42,108 +49,209 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Hàm tiện ích thêm class khi element xuất hiện trong viewport (sẽ dùng cho animation)
+    // Intersection Observer for Animations
     const observerOptions = {
-        root: null,
-        rootMargin: '0px',
         threshold: 0.1
     };
 
-    const observer = new IntersectionObserver((entries, observer) => {
+    const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.classList.add('in-view');
-            } else {
-                // Khôi phục lại hiệu ứng fadein mỗi khi cuộn qua lại
-                entry.target.classList.remove('in-view');
             }
         });
     }, observerOptions);
 
-    // Mặc định, sẽ áp dụng cho tất cả elements có class .animate-on-scroll
     document.querySelectorAll('.animate-on-scroll').forEach(el => {
         observer.observe(el);
     });
 
-    // Xử lý chuyển đổi Tab cho hệ thống Docs (Tài liệu API Private)
+    // Docs Tabs
     const docTabs = document.querySelectorAll('.tech-sidebar li');
     const docContents = document.querySelectorAll('.doc-pane');
 
     docTabs.forEach(tab => {
         tab.addEventListener('click', () => {
-            // Remove active from all tabs
             docTabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             
-            // Get target id
             const target = tab.getAttribute('data-target');
-            
-            // Hide all contents
             docContents.forEach(pane => {
                 pane.classList.remove('active');
                 pane.style.display = 'none';
             });
             
-            // Show target
             const targetPane = document.getElementById(target);
             if (targetPane) {
                 targetPane.classList.add('active');
                 targetPane.style.display = 'block';
-                targetPane.style.animation = 'fadeInTab 0.4s ease forwards';
             }
         });
     });
-
-    // Hiệu ứng Typewriter (Gõ chữ) cho Hero Title
-    const typingElement = document.querySelector('.typing-text');
-    if (typingElement) {
-        const texts = [
-            "Intelligent Skin Cancer Diagnostics",
-            "High-Precision Lesion Analysis",
-            "Secured Hospital-grade Edge AI",
-            "Enterprise Deep Learning Models"
-        ];
-        const gradients = [
-            "linear-gradient(90deg, #f4f4f5 0%, #a1a1aa 100%)", // Silver / Platinum
-            "linear-gradient(90deg, #7dd3fc 0%, #0284c7 100%)", // Luxurious Medical Blue
-            "linear-gradient(90deg, #e4e4e7 0%, #71717a 100%)", // Titanium
-            "linear-gradient(90deg, #ffffff 0%, #e4e4e7 100%)"  // Pure Elegance
-        ];
-
-        let textIndex = 0;
-        let charIndex = 0;
-        let isDeleting = false;
-
-        // Cài đặt gradient khởi đầu
-        typingElement.style.backgroundImage = gradients[0];
-
-        function typeWriter() {
-            const currentText = texts[textIndex];
+    // Performance Rocky Scroll Effect
+    const rockySection = document.querySelector('.performance-rocky');
+    const rockyText = document.querySelector('.rocky-bg-text');
+    
+    if (rockySection && rockyText) {
+        window.addEventListener('scroll', () => {
+            const sectionRect = rockySection.getBoundingClientRect();
+            const sectionTop = sectionRect.top;
+            const sectionHeight = sectionRect.height;
+            const windowHeight = window.innerHeight;
             
-            if (isDeleting) {
-                typingElement.textContent = currentText.substring(0, charIndex - 1);
-                charIndex--;
-            } else {
-                typingElement.textContent = currentText.substring(0, charIndex + 1);
-                charIndex++;
+            if (sectionTop < windowHeight && sectionTop > -sectionHeight) {
+                // Progress from 0 (section enters bottom) to 1 (section leaves top)
+                const scrollProgress = (windowHeight - sectionTop) / (windowHeight + sectionHeight);
+                // Move text down relative to scroll progress
+                const moveY = scrollProgress * 400; // Adjust sensitivity
+                rockyText.style.transform = `translateY(${moveY}px)`;
             }
-
-            let typeSpeed = isDeleting ? 30 : 60;
-
-            if (!isDeleting && charIndex === currentText.length) {
-                isDeleting = true;
-                typeSpeed = 2500; // Dừng lại để người dùng đọc (2.5 giây)
-            } else if (isDeleting && charIndex === 0) {
-                isDeleting = false;
-                textIndex = (textIndex + 1) % texts.length;
-                typingElement.style.backgroundImage = gradients[textIndex]; // Đổi gradient màu mới
-                typeSpeed = 400; // Nghỉ chút trước khi gõ sang câu khác
-            }
-
-            setTimeout(typeWriter, typeSpeed);
-        }
-
-        // Bắt đầu chạy sau khi hiệu ứng Fade-in của header đã ổn định
-        setTimeout(typeWriter, 1200);
+        });
     }
+});
+
+// ==========================================
+// MIND MAP INTERACTION
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const treeNodes = document.querySelectorAll('.tree-node');
+    const infoBox = document.getElementById('mindmap-info');
+
+    if (treeNodes.length > 0 && infoBox) {
+        treeNodes.forEach(node => {
+            node.addEventListener('click', (e) => {
+                // Prevent bubbling if needed
+                e.stopPropagation();
+                
+                // Remove active from all
+                treeNodes.forEach(n => n.classList.remove('active'));
+                
+                // Add active to clicked
+                node.classList.add('active');
+                
+                // Get data
+                const title = node.getAttribute('data-title');
+                const desc = node.getAttribute('data-desc');
+                
+                if (title && desc) {
+                    // Animate info box
+                    infoBox.style.opacity = 0;
+                    infoBox.style.transform = 'translateY(10px)';
+                    
+                    setTimeout(() => {
+                        infoBox.innerHTML = `<h3>${title}</h3><p>${desc}</p>`;
+                        infoBox.style.opacity = 1;
+                        infoBox.style.transform = 'translateY(0)';
+                    }, 200);
+                }
+            });
+        });
+    }
+});
+
+// ==========================================
+// CTA PARTICLE GRID (Hover Effect)
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const ctaSection = document.querySelector('.cta-section');
+    const canvas = document.getElementById('cta-particles');
+    
+    if (!ctaSection || !canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    
+    // Grid settings
+    const spacing = 35; // Distance between dots
+    const baseRadius = 1.5;
+    const hoverRadius = 4;
+    const hoverDistance = 180; // Distance of effect
+    
+    // Use project's medical blue color (or read from CSS variable)
+    const activeColor = '#0ea5e9'; // var(--medical-blue-base)
+    const baseColor = 'rgba(150, 150, 150, 0.2)'; // Faded dot color
+
+    let particles = [];
+    let mouse = { x: -1000, y: -1000 };
+
+    function init() {
+        width = canvas.width = ctaSection.offsetWidth;
+        height = canvas.height = ctaSection.offsetHeight;
+        particles = [];
+
+        for (let x = 0; x < width + spacing; x += spacing) {
+            for (let y = 0; y < height + spacing; y += spacing) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    baseX: x,
+                    baseY: y,
+                    r: baseRadius
+                });
+            }
+        }
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, width, height);
+
+        particles.forEach(p => {
+            // Calculate distance from mouse
+            const dx = mouse.x - p.x;
+            const dy = mouse.y - p.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // Calculate active ratio based on distance
+            let activeRatio = 0;
+            if (dist < hoverDistance) {
+                activeRatio = 1 - (dist / hoverDistance);
+            }
+
+            // Interpolate radius
+            const r = baseRadius + (hoverRadius - baseRadius) * activeRatio;
+            
+            // Move slightly towards mouse for a magnetic effect
+            const moveForce = activeRatio * 12;
+            if (dist > 0 && dist < hoverDistance) {
+                p.x = p.baseX + (dx / dist) * moveForce;
+                p.y = p.baseY + (dy / dist) * moveForce;
+            } else {
+                p.x += (p.baseX - p.x) * 0.1;
+                p.y += (p.baseY - p.y) * 0.1;
+            }
+
+            // Draw particle
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+            
+            if (activeRatio > 0.05) {
+                ctx.fillStyle = activeColor;
+                ctx.globalAlpha = 0.2 + (activeRatio * 0.8);
+            } else {
+                ctx.fillStyle = baseColor;
+                ctx.globalAlpha = 1;
+            }
+            
+            ctx.fill();
+            ctx.globalAlpha = 1; // Reset alpha
+        });
+
+        requestAnimationFrame(draw);
+    }
+
+    init();
+    draw();
+
+    window.addEventListener('resize', init);
+
+    ctaSection.addEventListener('mousemove', (e) => {
+        const rect = ctaSection.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+    });
+
+    ctaSection.addEventListener('mouseleave', () => {
+        mouse.x = -1000;
+        mouse.y = -1000;
+    });
 });

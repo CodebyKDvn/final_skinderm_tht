@@ -61,7 +61,7 @@ def write_blogs(state: AgentState):
         "- 'title'\n"
         "- 'desc' (2 sentences max)\n"
         "- 'content' (Full detailed article in HTML, at least 3 paragraphs, using <h3>, <p>, <ul> to format. DO NOT use markdown code blocks like ```html inside the string. Just raw HTML string).\n"
-        "- 'img_keyword' (A single english word describing the image, e.g., 'sunscreen', 'doctor', 'skin', 'clinic').\n"
+        "- 'visual_description' (A detailed English description for a professional medical stock photo related to this topic. Focus on realistic clinical settings, dermatology equipment, or skin care products. DO NOT include any text in the image).\n"
         "Return ONLY a valid JSON array of exactly 3 objects. "
         f"The language must be {lang}."
     )
@@ -81,31 +81,39 @@ def write_blogs(state: AgentState):
             
         blogs = json.loads(content)
         for blog in blogs:
-            keyword = blog.get('img_keyword', 'dermatology').replace(' ', '%20')
-            blog['img'] = f"https://image.pollinations.ai/prompt/beautiful%20dermatology%20{keyword}%20medical%20photography?width=800&height=600&nologo=true"
+            # Use a high-quality prompt for Pollinations or a search-like approach
+            desc = blog.get('visual_description', 'professional dermatology medical photography')
+            # Enhance prompt for realism
+            enhanced_prompt = f"Professional medical stock photo of {desc}, high resolution, realistic, clinical lighting, 8k"
+            encoded_prompt = enhanced_prompt.replace(' ', '%20')
+            # Using a random seed to ensure different images for different topics
+            import random
+            seed = random.randint(1, 1000000)
+            blog['img'] = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=800&height=600&nologo=true&seed={seed}"
     except Exception as e:
         print(f"[LangGraph] Blog writing error: {e}")
+        # Fallback with realistic-ish prompts
         blogs = [
             { 
                 "category": "Cập nhật", 
                 "title": "Bảo vệ làn da của bạn", 
                 "desc": "Những phương pháp bảo vệ da trước ánh nắng mặt trời.", 
                 "content": "<h3>Tại sao phải bảo vệ da?</h3><p>Tia UV từ ánh nắng mặt trời là nguyên nhân chính gây ra lão hóa sớm và ung thư da. Việc sử dụng kem chống nắng hàng ngày giúp tạo lớp màng bảo vệ hiệu quả.</p><h3>Các bước cơ bản</h3><ul><li>Thoa kem chống nắng SPF 30+ trở lên.</li><li>Đeo kính râm và áo khoác khi ra ngoài.</li><li>Tránh ánh nắng trực tiếp từ 10h sáng đến 4h chiều.</li></ul>",
-                "img": "https://image.pollinations.ai/prompt/sunscreen%20skincare%20dermatology?width=800&height=600&nologo=true" 
+                "img": "https://images.unsplash.com/photo-1598440494830-ec069c97b69d?q=80&w=800" 
             },
             { 
                 "category": "Kiến thức", 
                 "title": "AI trong Y tế", 
                 "desc": "Skinderm AI giúp phát hiện ung thư da sớm hơn.", 
                 "content": "<h3>Trí tuệ nhân tạo (AI) hoạt động như thế nào?</h3><p>Công nghệ AI học hỏi từ hàng triệu hình ảnh y khoa để nhận diện các mô hình bất thường trên da. Tốc độ phân tích của AI chỉ mất vài giây với độ chính xác cao.</p><p>Skinderm AI sử dụng mô hình học sâu tiên tiến nhất, mang lại một phương pháp tầm soát nhanh chóng và tiện lợi ngay tại nhà.</p>",
-                "img": "https://image.pollinations.ai/prompt/artificial%20intelligence%20doctor%20technology?width=800&height=600&nologo=true" 
+                "img": "https://images.unsplash.com/photo-1576091160550-2173dad99901?q=80&w=800" 
             },
             { 
                 "category": "Mẹo vặt", 
                 "title": "Dưỡng ẩm đúng cách", 
                 "desc": "Bí quyết dưỡng ẩm cho da mùa hanh khô hiệu quả.", 
                 "content": "<h3>Tầm quan trọng của việc dưỡng ẩm</h3><p>Nước chiếm tỷ lệ lớn trong cấu trúc da. Khi thiếu nước, da sẽ trở nên khô, nứt nẻ và dễ bị tổn thương bởi các tác nhân bên ngoài.</p><h3>Bí quyết cho bạn</h3><ul><li>Uống đủ 2 lít nước mỗi ngày.</li><li>Sử dụng kem dưỡng ẩm phù hợp với loại da.</li><li>Không rửa mặt bằng nước quá nóng.</li></ul>",
-                "img": "https://image.pollinations.ai/prompt/skincare%20moisturizer%20water%20splash?width=800&height=600&nologo=true" 
+                "img": "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=800" 
             }
         ]
         

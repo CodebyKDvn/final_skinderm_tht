@@ -1,0 +1,201 @@
+/**
+ * chat.js - Immersive AI Doctor Chat Module
+ */
+
+import state from './state.js';
+import API from './api.js';
+
+const CHAT = {
+    processAIContent(text) {
+        // Replace terminal-style progress bars [######] 80%
+        return text.replace(/\[([#=->\s]{5,})\]\s*(\d+)(?:\s*%)?/g, (match, bars, percent) => {
+            const p = parseInt(percent);
+            let colorClass = 'success';
+            if (p > 70) colorClass = 'danger';
+            else if (p > 40) colorClass = 'warning';
+            
+            return `
+                <div class="ai-progress-wrapper">
+                    <div class="ai-progress-label">
+                        <span>Độ nguy hiểm:</span>
+                        <span>${p}%</span>
+                    </div>
+                    <div class="ai-progress-container">
+                        <div class="ai-progress-fill ${colorClass}" style="width: ${p}%"></div>
+                    </div>
+                </div>`;
+        });
+    },
+
+    async sendMessage(chatInput, chatHistory, btnSendMessage, chatModelSelect) {
+        const text = chatInput.value.trim();
+        if (!text && !state.isGeneratingResponse) return;
+        if (state.isGeneratingResponse) return;
+
+        // UI Updates
+        const chatWelcome = document.getElementById('chatWelcome');
+        if (chatWelcome) {
+            chatWelcome.style.opacity = '0';
+            setTimeout(() => { chatWelcome.style.display = 'none'; }, 500);
+        }
+
+        // Add User Bubble
+        const userWrapper = document.createElement('div');
+        userWrapper.className = 'message-wrapper';
+        userWrapper.innerHTML = `
+            <div class="message-bubble-modern msg-user-modern">
+                ${text.replace(/\n/g, '<br>')}
+            </div>
+        `;
+        chatHistory.appendChild(userWrapper);
+        
+        chatInput.value = '';
+        chatInput.style.height = '44px';
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        // Change Send button to Stop
+        btnSendMessage.innerHTML = '<i class="fa-solid fa-stop"></i>';
+        btnSendMessage.style.background = 'var(--text-primary)';
+        state.isGeneratingResponse = true;
+
+        // AI Placeholder
+        const aiWrapper = document.createElement('div');
+        aiWrapper.className = 'message-wrapper';
+        aiWrapper.innerHTML = `
+            <div style="display: flex; gap: 12px; max-width: 100%;">
+                <div class="message-avatar avatar-bot"><img src="assets/img/logo.png" alt="AI"></div>
+                <div class="message-bubble-modern msg-bot-modern" style="flex: 1;">
+                    <div class="ai-status-msg-container">
+                        <div class="ai-status-dot"></div>
+                        <div class="ai-status-text">Đang kết nối với Skinderm AI...</div>
+                    </div>
+                    <div class="thinking-status-video active">
+                        <video src="assets/video/logo.mp4" autoplay loop muted playsinline></video>
+                    </div>
+                </div>
+            </div>
+        `;
+        chatHistory.appendChild(aiWrapper);
+        
+        const aiBubble = aiWrapper.querySelector('.msg-bot-modern');
+        const thinkingVideo = aiWrapper.querySelector('.thinking-status-video');
+        const statusContainer = aiWrapper.querySelector('.ai-status-msg-container');
+        const statusText = aiWrapper.querySelector('.ai-status-text');
+        
+        const updateStatus = (msg) => { if (statusText) statusText.textContent = msg; };
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        state.abortController = new AbortController();
+
+        try {
+            updateStatus("Đang đọc dữ liệu chẩn đoán của bạn...");
+            const context = state.history.length ? `Lịch sử chẩn đoán: ${JSON.stringify(state.history[0].details)}` : "Chưa có dữ liệu scan.";
+            
+            updateStatus("Đang phân tích yêu cầu...");
+            const response = await API.startChatStream(text, chatModelSelect.value, context, state.abortController.signal);
+
+            if (!response.ok) throw new Error("Lỗi kết nối máy chủ AI");
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            let fullAiRes = "";
+            let thoughtElement = null;
+            let contentElement = null;
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+                
+                for (const line of lines) {
+                    if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.error) throw new Error(data.error);
+                            
+                            const delta = data.choices[0].delta.content || "";
+                            if (delta) {
+                                fullAiRes += delta;
+
+                                // Extract Thought process
+                                const thoughtMatch = fullAiRes.match(/(?:\(think\)|<think>|<thought>)([\s\S]*?)(?:\(\/think\)|<\/think>|<\/thought>|$)/);
+                                if (thoughtMatch) {
+                                    if (!thoughtElement) {
+                                        updateStatus("AI đang suy nghĩ...");
+                                        thoughtElement = document.createElement('div');
+                                        thoughtElement.className = 'msg-thinking-container';
+                                        if (!state.isThinkingEnabled) thoughtElement.classList.add('hidden-thinking');
+                                        
+                                        thoughtElement.innerHTML = `<div class="msg-thinking-header"><i class="fa-solid fa-brain"></i> Quá trình suy nghĩ <i class="fa-solid fa-chevron-down" style="margin-left: auto; font-size: 0.7rem;"></i></div><div class="msg-thinking-content"></div>`;
+                                        
+                                        if(contentElement) aiBubble.insertBefore(thoughtElement, contentElement);
+                                        else aiBubble.appendChild(thoughtElement);
+
+                                        thoughtElement.querySelector('.msg-thinking-header').addEventListener('click', () => {
+                                            const content = thoughtElement.querySelector('.msg-thinking-content');
+                                            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+                                        });
+                                    }
+                                    thoughtElement.querySelector('.msg-thinking-content').innerHTML = marked.parse(thoughtMatch[1]);
+                                }
+
+                                // Main Content
+                                let displayContent = fullAiRes.replace(/(?:\(think\)|<think>|<thought>)[\s\S]*?(?:\(\/think\)|<\/think>|<\/thought>|$)/g, '').trim();
+                                if (displayContent) {
+                                    if(thinkingVideo.classList.contains('active')) {
+                                        thinkingVideo.classList.remove('active');
+                                        updateStatus("AI đang soạn câu trả lời...");
+                                    }
+
+                                    if (!contentElement) {
+                                        contentElement = document.createElement('div');
+                                        contentElement.className = 'msg-final-content is-typing';
+                                        aiBubble.appendChild(contentElement);
+                                    }
+                                    
+                                    contentElement.innerHTML = marked.parse(this.processAIContent(displayContent));
+                                }
+
+                                chatHistory.scrollTop = chatHistory.scrollHeight;
+                            }
+                        } catch (e) {
+                            console.error("Stream parse error:", e);
+                        }
+                    }
+                }
+            }
+
+            if(thoughtElement && fullAiRes.match(/(?:\(\/think\)|<\/think>|<\/thought>)/)) {
+                thoughtElement.style.opacity = '0.7';
+                thoughtElement.querySelector('.msg-thinking-content').style.display = 'none';
+            }
+
+            if (contentElement) {
+                contentElement.classList.remove('is-typing');
+                let displayContent = fullAiRes.replace(/(?:\(think\)|<think>|<thought>)[\s\S]*?(?:\(\/think\)|<\/think>|<\/thought>|$)/g, '').trim();
+                contentElement.innerHTML = marked.parse(this.processAIContent(displayContent));
+            }
+
+        } catch (err) {
+            if (statusContainer) statusContainer.style.display = 'none';
+            if (err.name === 'AbortError') {
+                aiBubble.innerHTML += `<div style="color:var(--warning); font-size: 0.85rem; margin-top:10px;"><i class="fa-solid fa-ban"></i> Đã dừng tạo phản hồi.</div>`;
+            } else {
+                aiBubble.innerHTML += `<div style="color:var(--danger); font-size: 0.85rem; margin-top:10px;"><i class="fa-solid fa-circle-exclamation"></i> Lỗi: ${err.message}</div>`;
+            }
+        } finally {
+            if(thinkingVideo) thinkingVideo.classList.remove('active');
+            if (statusContainer) statusContainer.style.display = 'none';
+            btnSendMessage.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
+            btnSendMessage.style.background = 'var(--medical-blue-base)';
+            state.isGeneratingResponse = false;
+            state.abortController = null;
+            chatInput.focus();
+        }
+    }
+};
+
+export default CHAT;

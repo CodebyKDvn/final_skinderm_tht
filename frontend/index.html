@@ -3,37 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DermAI Vision - Intelligent Skin Cancer Diagnostics</title>
+    <title>Skinderm AI Vision - Intelligent Skin Cancer Diagnostics</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
     <!-- FontAwesome/Icons (Optional) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- CSS -->
     <link rel="stylesheet" href="css/style.css">
+
+    <!-- Three.js ImportMap -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+      }
+    }
+    </script>
 </head>
 <body>
-    <!-- Global Video Background -->
-    <div class="global-bg">
-        <video class="hero-video" autoplay muted loop playsinline>
-            <source src="assets/video/Mesh_strips_wave,_202603211318.mp4" type="video/mp4">
-        </video>
-        <div class="hero-overlay"></div>
+    <!-- Announcement Bar -->
+    <div class="announcement-bar">
+        <p>See how Skinderm AI is redefining diagnostic precision for dermatology <a href="#">Explore the results <i class="fa-solid fa-arrow-right"></i></a></p>
     </div>
 
     <!-- Navbar -->
     <nav class="navbar">
         <div class="nav-container">
-            <a href="#" class="logo">DermAI <span>Vision</span></a>
-            <div class="nav-links">
-                <a href="#intro">Giới thiệu</a>
-                <a href="#features">Tính năng</a>
-                <a href="#evaluation">Hiệu năng</a>
-                <a href="#docs">Docs</a>
+            <div class="nav-left">
+                <a href="#" class="logo">Skinderm AI</a>
+            </div>
+            <div class="nav-center">
+                <div class="nav-links">
+                    <a href="#intro">Products</a>
+                    <a href="#features">Highlights</a>
+                    <a href="#evaluation">Performance</a>
+                    <a href="#how-it-works">How It Works</a>
+                    <a href="#team">Team</a>
+                </div>
+            </div>
+            <div class="nav-right">
+                <a href="auth.html" class="btn-text">Log In</a>
+                <a href="#" class="btn btn-dark">Contact Sales</a>
             </div>
         </div>
     </nav>
@@ -42,21 +57,28 @@
     <main>
         <!-- Hero Section -->
         <header id="hero" class="hero-section">
-            <!-- Hero Content -->
-            <div class="hero-content">
-                <div class="badge animate-on-scroll">AI-Powered Diagnostic System</div>
+            <!-- Internal Video Background -->
+            <div class="hero-bg">
+                <video id="hero-video" class="hero-video" autoplay muted loop playsinline>
+                    <source src="assets/video/background_hero.mp4" type="video/mp4">
+                </video>
+                <div class="hero-overlay"></div>
+            </div>
+
+            <div class="hero-content text-center">
                 <h1 class="hero-title animate-on-scroll">
-                    DermAI Vision <br/>
-                    <div style="display: flex; justify-content: center; align-items: center; min-height: 1.2em;">
-                        <span class="gradient-text typing-text"></span><span class="cursor">|</span>
-                    </div>
+                    Diagnostics <br/>
+                    <span class="gradient-text">Built for Precision.</span>
                 </h1>
-                <p class="hero-desc animate-on-scroll delay-1">
-                    Công cụ phi lợi nhuận trong việc sàng lọc và phát hiện sớm các tổn thương da liễu thông qua xử lý ảnh chuyên sâu với sức mạnh của kiến trúc <strong>ConvNeXtV2</strong>.
+                <p class="hero-desc animate-on-scroll delay-1" style="margin-left: auto; margin-right: auto;">
+                    Launch and scale AI-assisted skin screening on one platform for clinical analysis, early detection, and real-time diagnostic support. Start where you want, expand as you grow.
                 </p>
-                <div class="hero-actions animate-on-scroll delay-2">
-                    <a href="app.html" class="btn btn-glow">
-                        <i class="fa-solid fa-microscope"></i> Khám phá ngay 
+                <div class="hero-actions animate-on-scroll delay-2" style="justify-content: center;">
+                    <a href="app.html" class="btn btn-dark">
+                        Explore the Platform
+                    </a>
+                    <a href="#" class="btn btn-white">
+                        Talk to an Expert
                     </a>
                 </div>
             </div>
@@ -67,342 +89,574 @@
             </div>
         </header>
 
-        <!-- Intro Section -->
-        <section id="intro" class="section intro-section">
-            <div class="container container-narrow text-center">
-                <h2 class="section-title animate-on-scroll">Sức mạnh của Trí tuệ Nhân tạo<br>trong Y tế Da liễu</h2>
-                <p class="section-desc animate-on-scroll delay-1">
-                    DermAI Vision được thiết kế để trở thành trợ lý đắc lực cho các bác sĩ da liễu và người dùng cá nhân trong việc sàng lọc tổn thương da từ giai đoạn sớm. Sử dụng Deep Learning, hệ thống có khả năng nhận diện các mô hình bất thường trên nốt ruồi với độ chính xác cao trên các tập dữ liệu y khoa chuẩn (ISIC Benchmark).
+
+        <!-- Products Section -->
+        <section id="intro" class="section products-section">
+            <div class="container text-center">
+                <h2 class="section-title animate-on-scroll">Everything you need to analyze, <br/>detect, and keep innovating</h2>
+                <p class="section-desc animate-on-scroll delay-1" style="max-width: 600px; margin: 0 auto 4rem auto;">
+                    Each module is powerful on its own. <br/>Together, they unlock diagnostic precision that legacy systems can't.
                 </p>
-                <p class="section-desc animate-on-scroll delay-2">
-                    Từ ứng dụng lâm sàng, hỗ trợ chẩn đoán cho đến nghiên cứu khoa học, DermAI thiết lập tiêu chuẩn mới về phân tích hình ảnh y yế, nhanh chóng và khách quan.
-                </p>
-                <div class="grid class-3 intro-stats animate-on-scroll delay-3">
-                    <div class="stat-item glass-card">
-                        <h3 class="stat-number gradient-text">98%</h3>
-                        <p class="stat-label">Độ nhạy phân loại</p>
+
+                <!-- Product Cards Grid -->
+                <div class="product-cards-grid animate-on-scroll delay-2">
+                    <div class="product-card glass-card">
+                        <div class="card-info">
+                            <h3>Screening</h3>
+                            <p>Rapid AI scan for early detection with full visual feedback.</p>
+                        </div>
+                        <div class="card-visual">
+                            <img src="assets/img/diagnostic_card.png" alt="Screening">
+                        </div>
                     </div>
-                    <div class="stat-item glass-card">
-                        <h3 class="stat-number gradient-text">&lt;1s</h3>
-                        <p class="stat-label">Thời gian suy luận</p>
+
+                    <div class="product-card glass-card">
+                        <div class="card-info">
+                            <h3>Diagnostics</h3>
+                            <p>Deep clinical analysis and detailed pathology reporting.</p>
+                        </div>
+                        <div class="card-visual">
+                            <img src="assets/img/report_card.png" alt="Diagnostics">
+                        </div>
                     </div>
-                    <div class="stat-item glass-card">
-                        <h3 class="stat-number gradient-text">22K</h3>
-                        <p class="stat-label">ImageNet Pretrained</p>
+
+                    <div class="product-card glass-card">
+                        <div class="card-info">
+                            <h3>Collaboration</h3>
+                            <p>Secure shared database for collaborative medical case review.</p>
+                        </div>
+                        <div class="card-visual">
+                            <img src="assets/img/neural_card.png" alt="Collaboration">
+                        </div>
+                    </div>
+
+                    <div class="product-card glass-card">
+                        <div class="card-info">
+                            <h3>Integration</h3>
+                            <p>Scalable hospital-grade API services for enterprise deployment.</p>
+                        </div>
+                        <div class="card-visual">
+                            <img src="assets/img/enterprise_card.png" alt="Integration">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Unified Platform Chips -->
+                <div class="platform-connection animate-on-scroll delay-3">
+                    <div class="chips-container">
+                        <span class="chip">ConvNeXtV2</span>
+                        <span class="chip">ImageNet-22K</span>
+                        <span class="chip">PyTorch Core</span>
+                        <span class="chip">CUDA Optimized</span>
+                        <span class="chip">Grad-CAM</span>
+                        <span class="chip">ISIC Benchmark</span>
+                    </div>
+                    <div class="connection-lines">
+                        <svg width="100%" height="100" viewBox="0 0 1000 100" preserveAspectRatio="none">
+                            <path d="M100,0 Q100,50 500,100" stroke="rgba(0,0,0,0.1)" fill="none" />
+                            <path d="M260,0 Q260,50 500,100" stroke="rgba(0,0,0,0.1)" fill="none" />
+                            <path d="M420,0 Q420,50 500,100" stroke="rgba(0,0,0,0.1)" fill="none" />
+                            <path d="M580,0 Q580,50 500,100" stroke="rgba(0,0,0,0.1)" fill="none" />
+                            <path d="M740,0 Q740,50 500,100" stroke="rgba(0,0,0,0.1)" fill="none" />
+                            <path d="M900,0 Q900,50 500,100" stroke="rgba(0,0,0,0.1)" fill="none" />
+                        </svg>
+                    </div>
+                    <div class="platform-logo">
+                        <div class="logo-inner">
+                            <i class="fa-solid fa-microscope"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Unified Platform Section -->
+                <div class="unified-platform text-center animate-on-scroll">
+                    <h2 class="section-title">Built on a Unified Platform</h2>
+                    <p class="section-desc" style="max-width: 600px; margin: 0 auto 3rem auto;">
+                        Most diagnostic tools were assembled. Skinderm AI was built as one.
+                    </p>
+                    <div class="grid class-3 platform-features">
+                        <div class="p-feature">
+                            <i class="fa-solid fa-bolt"></i>
+                            <h4>Launch Faster</h4>
+                            <p>Deploy AI screening without managing fragmented medical datasets.</p>
+                        </div>
+                        <div class="p-feature">
+                            <i class="fa-solid fa-users"></i>
+                            <h4>Collaborate Easily</h4>
+                            <p>Design workflows around patients, not technical platform constraints.</p>
+                        </div>
+                        <div class="p-feature">
+                            <i class="fa-solid fa-microchip"></i>
+                            <h4>Keep Innovating</h4>
+                            <p>Add new diagnostic capabilities without rebuilding your foundation.</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Features Section -->
-        <section id="features" class="section">
-            <div class="container">
-                <div class="text-center">
-                    <h2 class="section-title animate-on-scroll">Tính năng Cốt lõi của Hệ thống</h2>
-                    <p class="section-desc animate-on-scroll delay-1 container-narrow" style="margin: 0 auto 3rem auto;">
-                        Kiến trúc Deep Learning tiên tiến kết hợp cùng các kỹ thuật tối ưu hóa hiện đại nhất, mang lại hiệu suất vượt trội và độ tin cậy y khoa cao.
-                    </p>
-                </div>
 
-                <div class="grid class-3 features-grid">
-                    <div class="glass-card feature-card animate-on-scroll delay-1">
-                        <div class="feature-icon"><i class="fa-solid fa-microscope"></i></div>
-                        <h3>Phân tích Ảnh Da liễu AI</h3>
-                        <p>Xử lý hình ảnh nốt ruồi độ phân giải cao, nhận diện chi tiết các đặc trưng vi mô của tế bào da bệnh lý.</p>
+        <!-- Highlights Section -->
+        <section id="features" class="section highlights-section" style="position: relative;">
+            <!-- Hoa 3D ở góc dưới bên trái -->
+            <div id="flower-container" style="position: absolute; bottom: 0px; left: -20px; width: 500px; height: 500px; pointer-events: none; z-index: 0; opacity: 0.6; filter: blur(3px);"></div>
+            
+            <div class="container" style="position: relative; z-index: 2;">
+                <div class="split-layout highlights-layout">
+                    <div class="highlights-content animate-on-scroll">
+                        <div class="highlights-label">
+                            <span class="dot"></span> Highlights
+                        </div>
+                        <h2 class="highlights-main-title">Designed to <br/>Reveal More</h2>
+                        
+                        <div class="highlights-list">
+                            <div class="highlight-item">
+                                <div class="hi-left">
+                                    <span class="hi-bullet"></span>
+                                    <h4>Deep Learning Core</h4>
+                                </div>
+                                <div class="hi-right">
+                                    <p>State-of-the-art ConvNeXtV2 architecture optimized for high-resolution dermatological image analysis and pixel-perfect accuracy.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="highlight-item">
+                                <div class="hi-left">
+                                    <span class="hi-bullet"></span>
+                                    <h4>Privacy-First Architecture</h4>
+                                </div>
+                                <div class="hi-right">
+                                    <p>End-to-end encrypted diagnostic pipeline compliant with international medical data standards, ensuring patient confidentiality.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="highlight-item">
+                                <div class="hi-left">
+                                    <span class="hi-bullet"></span>
+                                    <h4>Real-time Inference</h4>
+                                </div>
+                                <div class="hi-right">
+                                    <p>Sub-second feedback loops powered by enterprise-grade CUDA optimization for instant diagnostic support at the point of care.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="highlight-item">
+                                <div class="hi-left">
+                                    <span class="hi-bullet"></span>
+                                    <h4>Explainable AI (XAI)</h4>
+                                </div>
+                                <div class="hi-right">
+                                    <p>Visual transparency via Grad-CAM heatmaps, showing clinicians exactly which areas the AI model focused on during analysis.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="glass-card feature-card animate-on-scroll delay-2">
-                        <div class="feature-icon"><i class="fa-solid fa-network-wired"></i></div>
-                        <h3>Kiến trúc ConvNeXtV2</h3>
-                        <p>Backbone mạnh mẽ kết hợp ưu điểm của CNN truyền thống và Transformer, pretrained trên ImageNet-22K.</p>
-                    </div>
-
-                    <div class="glass-card feature-card animate-on-scroll delay-3">
-                        <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
-                        <h3>Suy luận tối ưu GPU</h3>
-                        <p>Sử dụng Mixed Precision (AMP) giúp phản hồi kết quả chẩn đoán gần như tức thì với tài nguyên được tối ưu tối đa.</p>
-                    </div>
-
-                    <div class="glass-card feature-card animate-on-scroll delay-1">
-                        <div class="feature-icon"><i class="fa-solid fa-chart-pie"></i></div>
-                        <h3>Đánh giá Đa Chỉ số</h3>
-                        <p>Theo dõi sát sao hiệu năng qua các metric y tế chuẩn xác cao như Macro F1 Score và ROC-AUC.</p>
-                    </div>
-
-                    <div class="glass-card feature-card animate-on-scroll delay-2">
-                        <div class="feature-icon"><i class="fa-solid fa-layer-group"></i></div>
-                        <h3>Stratified K-Fold CV</h3>
-                        <p>Cơ chế Cross-validation 3-folds giúp mô hình khái quát hóa cực tốt, ngăn chặn triệt để hiện tượng Overfitting.</p>
-                    </div>
-
-                    <div class="glass-card feature-card animate-on-scroll delay-3">
-                        <div class="feature-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-                        <h3>Test-Time Augmentation</h3>
-                        <p>Tương tác đa biến thể ảnh (TTA) trong pha suy luận giúp củng cố và tăng cường độ tin cậy của kết quả dự đoán cuối cùng.</p>
+                    <div class="highlights-visual animate-on-scroll delay-2">
+                        <img src="assets/img/use_case.png" alt="Skinderm AI Device" class="floating-visual">
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Các section tiếp theo sẽ phát triển ở đây -->
+        <!-- Performance Section (Rocky Theme) -->
+        <section id="evaluation" class="performance-rocky">
+            <div class="rocky-bg-text-container">
+                <h1 class="rocky-bg-text">SKINDERM</h1>
+            </div>
+            
+            <div class="rocky-side-labels">
+                <span class="rocky-label left">AI VISION</span>
+                <span class="rocky-label right">MEDICAL GRADE</span>
+            </div>
 
-        <!-- Evaluation Section -->
-        <section id="evaluation" class="section eval-section">
-            <div class="container">
-                <div class="text-center">
-                    <h2 class="section-title animate-on-scroll">Đánh Giá Hiệu Năng</h2>
-                    <p class="section-desc animate-on-scroll delay-1 container-narrow" style="margin: 0 auto 3rem auto;">
-                        Hiệu năng phân loại tổn thương da vượt trội, được chứng minh qua đánh giá chéo đa biến trên tập dữ liệu benchmark.
-                    </p>
+            <div class="rocky-visual-container">
+                <img src="assets/img/rocky.png" alt="Performance Rocky" class="rocky-img">
+            </div>
+
+            <div class="rocky-content-bottom">
+                <div class="rocky-stats-grid">
+                    <div class="rocky-stat-item">
+                        <span class="rocky-stat-label">ACCURACY</span>
+                        <span class="rocky-stat-value">98.4%</span>
+                    </div>
+                    <div class="rocky-stat-item">
+                        <span class="rocky-stat-label">DATASETS</span>
+                        <span class="rocky-stat-value">250k+</span>
+                    </div>
+                    <div class="rocky-stat-item">
+                        <span class="rocky-stat-label">ANALYSIS</span>
+                        <span class="rocky-stat-value">&lt;1s</span>
+                    </div>
+                    <div class="rocky-stat-item">
+                        <span class="rocky-stat-label">USERS</span>
+                        <span class="rocky-stat-value">15k+</span>
+                    </div>
                 </div>
-
-                <div class="grid class-2 animate-on-scroll delay-2">
-                    <div class="glass-card">
-                        <h3 style="margin-bottom: 2rem; color: var(--titanium-light); font-weight: 400; letter-spacing: 0.5px;">Phân tích F1 & AUC Metric</h3>
-                        
-                        <div class="v-chart-container">
-                            <div class="v-chart-col">
-                                <div class="v-value">89%</div>
-                                <div class="v-bar-wrapper">
-                                    <div class="v-bar fill-muted animate" style="height: 89%;"></div>
-                                </div>
-                                <div class="v-label">Std<br/>384px</div>
-                            </div>
-                            <div class="v-chart-col">
-                                <div class="v-value">95%</div>
-                                <div class="v-bar-wrapper">
-                                    <div class="v-bar fill-accent animate" style="height: 95%;"></div>
-                                </div>
-                                <div class="v-label">Pro<br/>448px</div>
-                            </div>
-                            <div class="v-chart-col" style="margin-left: 1rem; border-left: 1px dashed rgba(255,255,255,0.05); padding-left: 1.5rem;">
-                                <div class="v-value">95%</div>
-                                <div class="v-bar-wrapper">
-                                    <div class="v-bar fill-muted animate" style="height: 95%;"></div>
-                                </div>
-                                <div class="v-label">No<br/>TTA</div>
-                            </div>
-                            <div class="v-chart-col">
-                                <div class="v-value">98%</div>
-                                <div class="v-bar-wrapper">
-                                    <div class="v-bar fill-accent animate" style="height: 98%;"></div>
-                                </div>
-                                <div class="v-label">With<br/>TTA</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="glass-card">
-                        <h3 style="margin-bottom: 2rem; color: var(--titanium-light); font-weight: 400; letter-spacing: 0.5px;">Độ ổn định K-Fold</h3>
-                        <div class="fold-stats">
-                            <div class="fold-item">
-                                <div class="fold-header"><span>Fold 1</span><span>96.4%</span></div>
-                                <div class="progress-bar"><div class="progress-fill" style="width: 96.4%;"></div></div>
-                            </div>
-                            <div class="fold-item">
-                                <div class="fold-header"><span>Fold 2</span><span>97.1%</span></div>
-                                <div class="progress-bar"><div class="progress-fill" style="width: 97.1%;"></div></div>
-                            </div>
-                            <div class="fold-item">
-                                <div class="fold-header"><span>Fold 3</span><span>96.8%</span></div>
-                                <div class="progress-bar"><div class="progress-fill" style="width: 96.8%;"></div></div>
-                            </div>
-                        </div>
-                        <p class="stability-note mt-4"><em>* Độ lệch chuẩn chỉ ±0.35%, chứng tỏ mô hình học được các đặc trưng thực sự thay vì ghi nhớ (overfitting) các mẫu cá biệt.</em></p>
-                    </div>
+                <div class="rocky-actions">
+                    <a href="app.html" class="btn-rocky">EXPLORE NOW</a>
                 </div>
             </div>
         </section>
 
-        <!-- System Docs Section -->
-        <section id="docs" class="section tech-section" style="background: rgba(255,255,255,0.01);">
-            <div class="container container-narrow" style="max-width: 1200px;">
-                <div class="text-center">
-                    <h2 class="section-title animate-on-scroll">Hệ thống Tài liệu</h2>
-                    <p class="section-desc animate-on-scroll delay-1" style="margin: 0 auto 3rem auto; max-width: 800px;">
-                        Truy cập toàn bộ tài liệu hướng dẫn và đặc tả kỹ thuật của nền tảng DermAI Vision.
-                    </p>
-                </div>
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="how-it-works-section" style="background: var(--bg-main);">
+            <div class="container text-center">
+                <h2 class="section-title animate-on-scroll">How It Works</h2>
+                <p class="section-desc animate-on-scroll delay-1" style="max-width: 600px; margin: 0 auto 4rem auto;">
+                    Explore the intelligence behind SkindermAI. Click on the nodes in the mind map below to uncover the diagnostic process.
+                </p>
 
-                <div class="tech-container animate-on-scroll delay-2" style="display: grid; grid-template-columns: 280px 1fr; align-items: start; gap: 3rem;">
-                    <div class="tech-sidebar glass-card" style="padding: 1.5rem 0; width: 100%;">
-                        <ul style="max-height: 60vh; overflow-y: auto;">
-                            <li class="active" data-target="doc-overview">Overview</li>
-                            <li data-target="doc-quickstart">Quickstart</li>
-                            <li data-target="doc-models">Models</li>
-                            <li data-target="doc-inference">Inference</li>
-                            <li data-target="doc-api">API Reference</li>
-                            <li data-target="doc-datasets">Datasets</li>
-                            <li data-target="doc-benchmarks">Benchmarks</li>
-                            <li data-target="doc-explainability">Explainability</li>
-                            <li data-target="doc-training">Training</li>
-                            <li data-target="doc-architecture">Architecture</li>
-                            <li data-target="doc-deployment">Deployment</li>
-                            <li data-target="doc-ui">UI Integration</li>
-                            <li data-target="doc-compliance">Compliance</li>
-                            <li data-target="doc-faq">FAQ</li>
-                            <li data-target="doc-changelog">Changelog</li>
+                <div class="tree-wrapper animate-on-scroll delay-2">
+                    <div class="tree">
+                        <ul>
+                            <li>
+                                <div class="tree-node center-node" data-title="SkindermAI Core" data-desc="The central processing engine that orchestrates the entire diagnostic workflow, acting as the intelligent bridge between visual input and clinical output.">SkindermAI Core</div>
+                                <ul>
+                                    <li>
+                                        <div class="tree-node" data-title="Image Input" data-desc="Securely captures and standardizes dermatological images from any device, ensuring high-fidelity data ingestion.">Image Input</div>
+                                        <ul>
+                                            <li><div class="tree-node leaf-node" data-title="Preprocessing" data-desc="Automatically enhances image resolution and removes visual noise like hair or poor lighting using specialized filters.">Preprocessing</div></li>
+                                            <li><div class="tree-node leaf-node" data-title="Anonymization" data-desc="Strips identifying metadata (EXIF) to ensure 100% patient privacy and HIPAA/GDPR compliance.">Anonymization</div></li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        <div class="tree-node" data-title="AI Analysis" data-desc="The deep learning brain that analyzes the image, utilizing millions of parameters to detect microscopic anomalies.">AI Analysis</div>
+                                        <ul>
+                                            <li><div class="tree-node leaf-node" data-title="Feature Extraction" data-desc="Extracts complex patterns using state-of-the-art vision transformers (ConvNeXtV2), identifying asymmetrical borders and color variegation.">Feature Extraction</div></li>
+                                            <li><div class="tree-node leaf-node" data-title="Classification" data-desc="Classifies the lesion into distinct risk categories, calculating probability scores for conditions like Melanoma or Basal Cell Carcinoma.">Classification</div></li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        <div class="tree-node" data-title="Output & Review" data-desc="Translates complex AI calculations into clear, actionable insights for the clinician.">Output & Review</div>
+                                        <ul>
+                                            <li><div class="tree-node leaf-node" data-title="Grad-CAM Heatmap" data-desc="Generates a visual heatmap showing exactly which areas of the lesion triggered the AI's risk assessment, ensuring 'Explainable AI'.">Grad-CAM Heatmap</div></li>
+                                            <li><div class="tree-node leaf-node" data-title="Clinical Report" data-desc="Produces a comprehensive pathology report ready for medical review, complete with risk metrics and suggested next steps.">Clinical Report</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
                         </ul>
                     </div>
-                    
-                    <div class="tech-content glass-card" style="padding: 2.5rem !important; min-height: 50vh;">
-                        <!-- Overview -->
-                        <div id="doc-overview" class="doc-pane active" style="display: block;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">Platform Overview</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; margin-bottom: 1rem; font-size: 1.05rem;">
-                                Chào mừng đến với hệ thống tài liệu chính thức của DermAI Vision. Đây là trung tâm kiến thức lưu trữ thống nhất các thông số kỹ thuật, hướng dẫn tích hợp và kiến trúc vận hành của hệ thống AI chẩn đoán ung thư da chuyên sâu.
-                            </p>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                Nhân lõi mô hình được huấn luyện trên quy trình Deep Learning khép kín, tinh chỉnh từ hàng trăm ngàn mẫu bệnh lý học da liễu. Vui lòng sử dụng menu bên trái để điều hướng qua các phần tài liệu chi tiết. Sự hỗ trợ từ AI không được xem là phân tích pháp lý 100%.
-                            </p>
-                            <div style="margin-top: 2.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; display: flex; align-items: flex-start; gap: 1rem;">
-                                <i class="fa-solid fa-lock" style="color: var(--titanium-light); font-size: 1.5rem; margin-top: 5px;"></i>
-                                <div>
-                                    <h4 style="color: #fff; margin-bottom: 0.5rem; font-size: 1.1rem;">Restricted Access Notice</h4>
-                                    <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6;">Giao thức Inference API hiện đang quản lý khép kín tại tổ chức (In-house) và yêu cầu bắt buộc mã thông báo định danh Bearer Token ở cấp độ đối tác khả dụng toàn cục.</p>
-                                </div>
+                </div>
+
+                <div id="mindmap-info" class="mindmap-info-box animate-on-scroll delay-3">
+                    <h3>Select a node</h3>
+                    <p>Click on any node in the mind map above to learn how it functions within the SkindermAI architecture.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Meet The Team Section -->
+        <section id="team" class="team-section">
+            <div class="container text-center">
+                <h2 class="section-title animate-on-scroll">Meet the Team</h2>
+                <p class="section-desc animate-on-scroll delay-1" style="margin: 0 auto; max-width: 800px;">
+                    Learn how we are designing, launching, and scaling medical AI products.
+                </p>
+                
+                <div class="team-grid animate-on-scroll delay-2">
+                    <div class="team-card">
+                        <div class="team-visual" style="background: radial-gradient(circle at top left, #d2f6c5, #a8edd5);">
+                            <div class="team-card-inner-text">
+                                <h3 style="font-family: var(--font-sans);">SkindermAI</h3>
+                                <p>Vision Core</p>
                             </div>
                         </div>
-
-                        <!-- Quickstart -->
-                        <div id="doc-quickstart" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">Quickstart Integration</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem; margin-bottom: 1rem;">Tích hợp AI chẩn đoán vào hệ thống HIS/EMR của tổ chức y tế chỉ với 3 bước chuẩn hóa:</p>
-                            <ul style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem; padding-left: 1.5rem;">
-                                <li><strong>B1:</strong> Yêu cầu kết nối vật lý qua kênh độc quyền nội bộ (VPN y tế khu vực).</li>
-                                <li><strong>B2:</strong> Cấp phiên Endpoint Base URL và Bearer Key định danh thông qua Administrator.</li>
-                                <li><strong>B3:</strong> Kiểm duyệt phản hồi (Handshake API) bằng cURL script bảo mật do chuyên gia cung cấp.</li>
-                            </ul>
+                        <div class="team-info">
+                            <h4>CodeByKDvn</h4>
+                            <p>Leader, Founder of SkindermAI</p>
                         </div>
-
-                        <!-- Models -->
-                        <div id="doc-models" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">Proprietary Models</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                Core System chứa hai nhánh cấu hình mạnh mẽ để y bác sĩ lựa chọn:
-                                <br><br>
-                                - <strong>DermAI-v1.0 (Standard)</strong>: Tương thích tốt ảnh bệnh quang học 384x384px. Tốc độ suy luận siêu tốc <code>0.12s</code> phục vụ luồng Sàng Lọc quy mô lớn.
-                                <br><br>
-                                - <strong>DermAI-v2.0-Pro (HighRes)</strong>: Phân tích tế bào biểu bì sâu trên mạng điểm ảnh 448x448px, tập trung cho Chẩn đoán sâu tại các chuyên khoa.
-                                <br><br>
-                                <em>Lưu ý: Parameters/Weights của mô hình đã bị mã hóa phần cứng nội bộ.</em>
-                            </p>
+                    </div>
+                    
+                    <div class="team-card">
+                        <div class="team-visual" style="background: radial-gradient(circle at top left, #a8edd5, #fff);">
+                            <div class="team-card-inner-text">
+                                <h3 style="font-family: var(--font-sans);">SkindermAI</h3>
+                                <p>Frontend Architecture</p>
+                            </div>
                         </div>
-
-                        <!-- Inference -->
-                        <div id="doc-inference" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">Inference Protocol</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                Tiến trình truyền dẫn ảnh yêu cầu định dạng Payload JSON nghiêm ngặt (chuỗi Base64 <code>image/jpeg</code>). Server nhận tải sẽ tự động thực thi quá trình Test-Time Augmentation (TTA) trên lõi TensorRT.
-                            </p>
-                        </div>
-
-                        <!-- API Reference -->
-                        <div id="doc-api" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">Secure API Reference</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                Đường dẫn xử lý REST tiêu chuẩn:<br>
-                                - <code>POST /v1/vision/predict</code>: Trả về ma trận xác suất (Softmax array) chứa top rủi ro bệnh lý.<br>
-                                - <code>POST /v1/vision/explain</code>: Sinh đồ thị Grad-CAM chuẩn y tế hỗ trợ bác sĩ chẩn đoán hình ảnh.<br>
-                                Authentication Header: <code>Authorization: Bearer [REDACTED]</code>.
-                            </p>
-                        </div>
-
-                        <!-- Datasets -->
-                        <div id="doc-datasets" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">Datasets Privacy</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                Quy trình làm sạch dữ liệu (Metadata Cleansing) tự động khép kín. Thuật toán đã được "nạp nhãn mác" dựa trên kho kho dữ liệu phân loại chéo với 3 chuyên gia từ các viện uy tín, song song với tập chuẩn (ISIC 2019/2020 Benchmark archive).
-                            </p>
-                        </div>
-
-                        <!-- Benchmarks -->
-                        <div id="doc-benchmarks" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">Evaluation Benchmarks</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                Tổng quát hóa khả năng phán đoán ở mức <strong>98% Macro AUC</strong> trên mẫu tế bào ác tính / lành tính. Kiến trúc học K-fold cross-validation chứng minh mô hình hoạt động bền vững trước thông tin sai lệch nhỏ của bức xạ ảnh (Noise injection).
-                            </p>
-                        </div>
-
-                        <!-- Explainability -->
-                        <div id="doc-explainability" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">Algorithmic Explainability</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                Hệ thống không sử dụng nguyên lý hộp đen bảo thủ. Một sơ đồ mạng nhiệt đa lớp (Layer Heatmap CAM) sẽ thắp sáng vùng tế bào cụ thể gây nguy hiểm để "thuyết phục" y bác sĩ điều trị và dễ dàng truy vết lại chẩn đoán.
-                            </p>
-                        </div>
-
-                        <!-- Training (Encrypted) -->
-                        <div id="doc-training" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: #ff5f56; font-size: 1.8rem;"><i class="fa-solid fa-lock" style="font-size: 1.2rem; margin-right: 0.5rem; color: #ff5f56;"></i> Encrypted Content: Training Log</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                Dữ liệu thực thi máy chủ, môi trường huấn luyện đa luồng Multi-GPU, Loss Class-weight Imbalance Optimization cũng như lịch trình tính toán LR (Learning Rate Schedule) <strong>đã bị khóa</strong> đối với hạng Authorization Viewer hiện tại.
-                            </p>
-                        </div>
-
-                        <!-- Architecture (Encrypted) -->
-                        <div id="doc-architecture" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: #ff5f56; font-size: 1.8rem;"><i class="fa-solid fa-lock" style="font-size: 1.2rem; margin-right: 0.5rem; color: #ff5f56;"></i> Encrypted Content: Deep Architecture</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                Sơ đồ biểu diễn mã giả thiết kế lõi ConvNeXtV2 (Depthwise Convolution Layers & Token Mixers) là tài nguyên độc quyền do hệ thống tự phát triển. Yêu cầu cấp quyền chuyên sâu.
-                            </p>
-                        </div>
-
-                        <!-- Deployment -->
-                        <div id="doc-deployment" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">Deployment Specs</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                Hệ thống đóng gói tuân thủ bảo mật nội bộ và tương thích triển khai <strong>On-Premises</strong> Server (Máy chủ bệnh viện vật lý) hoặc Container Edge (Cấp cao). Không truyền luồng dữ liệu thô ra môi trường Internet mở.
-                            </p>
-                        </div>
-
-                        <!-- UI Integration -->
-                        <div id="doc-ui" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">Client / UI Integration</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                Nền tảng phân phối kèm một "Widget Dashboard" nhỏ gọn viết bằng Javascript SDK nhằm giúp Phòng Khám dễ dàng dán kết quả biểu đồ chẩn đoán sắc tố lên Website hoặc Máy tĩnh HIS đang chạy.
-                            </p>
-                        </div>
-
-                        <!-- Compliance -->
-                        <div id="doc-compliance" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">Legal & Compliance</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                Luồng công nghệ được tuân thủ 100% dựa trên quy tắc bảo vệ thông tin sức khỏe chuẩn (HIPAA / GDPR). Thuật toán không bao giờ ghi nhận hay lưu trữ Metadata thông tin định danh y tế thực tế dưới bất kỳ hình thức nào.
-                            </p>
-                        </div>
-
-                        <!-- FAQ -->
-                        <div id="doc-faq" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">FAQ</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                <strong>Hệ thống cập nhật phi tuyến mà không dừng ứng dụng (Zero-downtime)?</strong><br>
-                                Đúng vậy, máy chủ AI xử lý giao thoa qua cơ chế cân bằng tải, các trạm máy bệnh viện sẽ luôn nhận phản hồi liên tục. SLA đảm bảo Uptime lên đến 99.9%.
-                            </p>
-                        </div>
-
-                        <!-- Changelog -->
-                        <div id="doc-changelog" class="doc-pane" style="display: none;">
-                            <h3 style="margin-bottom: 1.5rem; color: var(--titanium-light); font-size: 1.8rem;">Changelog & Revisions</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem;">
-                                <strong>Version V2.4 (Current Stable)</strong><br>
-                                - Trình làng vi kiến trúc mới loại bỏ sợi nhiễu vật lý (mảng hạt, vi lông).<br>
-                                - Cập nhật module màu đa sắc, cho phép mô hình dễ nhận diện hơn với các thấu kính Smartphone chất lượng dưới 12MP của bệnh nhân tự chụp.
-                            </p>
+                        <div class="team-info">
+                            <h4>Tuan Minh</h4>
+                            <p>Reviewer, Frontend & UX UI developer</p>
                         </div>
                     </div>
                 </div>
             </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta-section" style="position: relative; overflow: hidden;">
+            <canvas id="cta-particles" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;"></canvas>
+            <div class="cta-content text-center" style="position: relative; z-index: 1;">
+                <h2 class="cta-title">Build what's next</h2>
+                <p class="cta-desc">Skinderm gives you the foundation to diagnose faster, differentiate, and keep moving.</p>
+                <div class="cta-actions">
+                    <a href="app.html" class="btn btn-dark">Explore the Platform</a>
+                    <a href="#" class="btn btn-white">Talk to an Expert</a>
+                </div>
+            </div>
+            <div class="cta-glow"></div>
         </section>
 
         <!-- Footer -->
-        <footer style="text-align: center; padding: 2rem; border-top: 1px solid rgba(255,255,255,0.05); color: var(--text-secondary); font-size: 0.9rem;">
-            <p>&copy; 2026 DermAI Vision Project. All rights reserved.</p>
+        <footer class="site-footer">
+            <div class="container footer-container">
+                <div class="footer-logo-col">
+                    <div class="footer-logo">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </div>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-col">
+                        <h4>Products</h4>
+                        <ul>
+                            <li><a href="#">Screening</a></li>
+                            <li><a href="#">Diagnostics</a></li>
+                            <li><a href="#">Collaboration</a></li>
+                            <li><a href="#">Integration</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Use Cases</h4>
+                        <ul>
+                            <li><a href="#">Hospitals</a></li>
+                            <li><a href="#">Clinics</a></li>
+                            <li><a href="#">Research</a></li>
+                            <li><a href="#">Education</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Resources</h4>
+                        <ul>
+                            <li><a href="#">Product Updates</a></li>
+                            <li><a href="#">Executive Playbooks</a></li>
+                            <li><a href="#">Support</a></li>
+                            <li><a href="#">Privacy</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Company</h4>
+                        <ul>
+                            <li><a href="#">About</a></li>
+                            <li><a href="#">Careers</a></li>
+                            <li><a href="#">Brand</a></li>
+                            <li><a href="#">Blog</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Skinderm AI Vision Project. All rights reserved.</p>
+                <p class="disclaimer">SkindermAI is a registered trademark. The diagnostic tools provided are for assistive purposes and do not replace professional medical judgment.</p>
+            </div>
         </footer>
     </main>
 
 
     <!-- JS -->
     <script src="js/main.js"></script>
+
+    <!-- 3D Flower Script -->
+    <script type="module">
+        import * as THREE from "three";
+
+        const container = document.getElementById('flower-container');
+        if (container) {
+            const scene = new THREE.Scene();
+            // Nền trong suốt để hòa vào trang
+            scene.background = null;
+
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, -0.5, 9);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.setClearColor(0x000000, 0); // Transparent
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+
+            const light1 = new THREE.DirectionalLight(0xa5f38a, 1.2);
+            light1.position.set(3, 4, 6);
+            scene.add(light1);
+
+            const light2 = new THREE.DirectionalLight(0x7df9c2, 0.8);
+            light2.position.set(-4, -3, 5);
+            scene.add(light2);
+
+            const backLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            backLight.position.set(-3, 4, -6);
+            scene.add(backLight);
+
+            // =====================================================
+            // MATERIALS
+            // =====================================================
+            function patchMaterial(material) {
+                material.onBeforeCompile = (shader) => {
+                    shader.uniforms.uProgress = { value: 0 };
+                    material.userData.shader = shader;
+                    
+                    shader.fragmentShader = `
+                        uniform float uProgress;
+                        varying vec2 vUv;
+                        ${shader.fragmentShader}
+                    `.replace(
+                        `#include <opaque_fragment>`,
+                        `
+                        if (vUv.x > uProgress) discard;
+                        #include <opaque_fragment>
+                        `
+                    );
+                };
+            }
+
+            const petalMaterial = new THREE.MeshStandardMaterial({
+                color: 0x7df9c2,
+                metalness: 0.05,
+                roughness: 0.4,
+                side: THREE.DoubleSide
+            });
+            patchMaterial(petalMaterial);
+
+            const centerMaterial = new THREE.MeshStandardMaterial({
+                color: 0xb0975e,
+                metalness: 0.1,
+                roughness: 0.4
+            });
+
+            // =====================================================
+            // FLOWER GROUP
+            // =====================================================
+            const flowerGroup = new THREE.Group();
+            scene.add(flowerGroup);
+
+            const flower = new THREE.Group();
+            flowerGroup.add(flower);
+
+            // Nhụy hoa
+            const centerGeometry = new THREE.CylinderGeometry(1.1, 1.1, 0.4, 64);
+            const center = new THREE.Mesh(centerGeometry, centerMaterial);
+            center.rotation.x = Math.PI / 2;
+            flower.add(center);
+
+            // Cánh hoa
+            function createTubePetal(angle, options = {}, material = petalMaterial) {
+                const { length = 2.4, width = 0.65, tubeRadius = 0.6, zOffset = 0 } = options;
+                const points = [
+                    new THREE.Vector3(-width * 0.28, 0.00, zOffset),
+                    new THREE.Vector3(-width * 0.82, length * 0.26, zOffset),
+                    new THREE.Vector3(-width * 0.68, length * 0.72, zOffset),
+                    new THREE.Vector3(0.00, length, zOffset),
+                    new THREE.Vector3(width * 0.68, length * 0.72, zOffset),
+                    new THREE.Vector3(width * 0.82, length * 0.26, zOffset),
+                    new THREE.Vector3(width * 0.28, 0.00, zOffset),
+                    new THREE.Vector3(0.00, -length * 0.12, zOffset)
+                ];
+                const curve = new THREE.CatmullRomCurve3(points, true, "catmullrom", 0.48);
+                const geometry = new THREE.TubeGeometry(curve, 240, tubeRadius, 72, true);
+                const petal = new THREE.Mesh(geometry, material);
+                petal.rotation.z = angle;
+                petal.translateY(1.1);
+                return petal;
+            }
+
+            const petals = [];
+            const petalCount = 8;
+            const petalPalette = [0x5bc695, 0x9cc455, 0x80c768, 0x80c9b6, 0x9ec772, 0x5bc695, 0x9cc455, 0x80c768];
+
+            for (let i = 0; i < petalCount; i++) {
+                const angle = i * Math.PI * 2 / petalCount;
+                const individualPetalMaterial = petalMaterial.clone();
+                individualPetalMaterial.color.setHex(petalPalette[i % petalPalette.length]);
+                patchMaterial(individualPetalMaterial);
+                
+                const petal = createTubePetal(angle, {
+                    length: 2.5,
+                    width: 0.7,
+                    tubeRadius: 0.65,
+                    zOffset: i * 0.001 
+                }, individualPetalMaterial);
+                
+                flower.add(petal);
+                petals.push(petal);
+            }
+
+            // Đặt hoa chéo một chút (nghiêng về bên trái/phải)
+            flower.rotation.x = -0.3; // Nghiêng ra trước
+            flower.rotation.y = 0.2; // Nghiêng sang trái/phải
+            flower.rotation.z = 0.15; // Xoay chéo
+
+            // =====================================================
+            // ANIMATION (INTERSECTION OBSERVER)
+            // =====================================================
+            let startTime = null;
+            let isAnimating = false;
+
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                if (isAnimating && startTime !== null) {
+                    const elapsedTime = (Date.now() - startTime) / 1000;
+
+                    // Hiện nhụy hoa (0s -> 0.8s)
+                    const centerProgress = Math.min(elapsedTime / 0.8, 1);
+                    center.scale.setScalar(centerProgress);
+
+                    // Vẽ cánh hoa (0.3s -> 2.3s)
+                    const petalProgress = Math.max(0, Math.min((elapsedTime - 0.3) / 2.0, 1));
+                    petals.forEach(p => {
+                        if (p.material.userData.shader) {
+                            p.material.userData.shader.uniforms.uProgress.value = petalProgress;
+                        }
+                    });
+
+                    // Hoa xoay rất chậm như một nhịp thở tự nhiên
+                    flowerGroup.rotation.y = Math.sin(elapsedTime * 0.3) * 0.1;
+                    flowerGroup.rotation.x = Math.cos(elapsedTime * 0.2) * 0.05;
+                }
+
+                renderer.render(scene, camera);
+            }
+
+            // Bắt đầu render loop
+            center.scale.setScalar(0);
+            animate();
+
+            // Kích hoạt khi cuộn tới
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        if (!isAnimating) {
+                            isAnimating = true;
+                            startTime = Date.now();
+                        }
+                    } else {
+                        // Tùy chọn: Reset lại khi cuộn qua để vẽ lại lần sau
+                        isAnimating = false;
+                        startTime = null;
+                        center.scale.setScalar(0);
+                        petals.forEach(p => {
+                            if (p.material.userData.shader) {
+                                p.material.userData.shader.uniforms.uProgress.value = 0;
+                            }
+                        });
+                    }
+                });
+            }, { threshold: 0.3 });
+
+            observer.observe(container);
+
+            // Xử lý resize
+            window.addEventListener("resize", () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+    </script>
 </body>
 </html>

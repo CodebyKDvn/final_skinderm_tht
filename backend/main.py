@@ -22,7 +22,6 @@ from PIL import Image
 import io
 import os
 from dotenv import load_dotenv
-from supabase import create_client, Client
 from firebase_admin_utils import firebase_auth_manager
 from openai import OpenAI
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -32,7 +31,7 @@ import threading
 # Load environment variables from .env file
 load_dotenv()
 
-app = FastAPI(title="SkindermAI Backend API", version="1.0.0")
+app = FastAPI(title="Skinderm AI Backend API", version="1.0.0")
 
 # --- NVIDIA AI Client ---
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
@@ -43,42 +42,91 @@ nv_client = OpenAI(
   max_retries = 0
 )
 
-# --- Supabase Initialization ---
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-supabase: Client = None
-admin_supabase: Client = None
+# --- Local Storage & SQLite Configuration ---
+import sqlite3
+import uuid
+from fastapi.staticfiles import StaticFiles
 
-if SUPABASE_URL and SUPABASE_KEY:
+# --- Local Storage & SQLite Configuration ---
+import sqlite3
+import uuid
+from fastapi.staticfiles import StaticFiles
+
+# Cấu hình đường dẫn lưu trữ (Ưu tiên từ .env, sau đó là ổ D, cuối cùng là thư mục hiện tại)
+STORAGE_ROOT = os.getenv("STORAGE_ROOT", "D:/")
+if not os.path.exists(STORAGE_ROOT) and STORAGE_ROOT == "D:/":
+    STORAGE_ROOT = os.getcwd()
+elif not os.path.exists(STORAGE_ROOT):
+    os.makedirs(STORAGE_ROOT, exist_ok=True)
+
+DB_PATH = os.path.join(STORAGE_ROOT, "skinderm.db")
+STORAGE_PATH = os.path.join(STORAGE_ROOT, "skinderm_storage")
+
+# Đảm bảo thư mục lưu trữ ảnh tồn tại
+if not os.path.exists(STORAGE_PATH):
     try:
-        # Standard client
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        
-        # Admin Client for backend operations (bypasses RLS)
-        if SUPABASE_SERVICE_KEY:
-            admin_supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-            print(f"[OK] Supabase Admin Client initialized (RLS Bypass active).")
-        else:
-            print(f"[WARN] SUPABASE_SERVICE_ROLE_KEY not found. RLS might block inserts.")
-            
-        # Use Admin client if available for bucket management
-        db_admin = admin_supabase if admin_supabase else supabase
-        try:
-            # Ensure bucket exists
-            buckets = db_admin.storage.list_buckets()
-            bucket_names = [b.name for b in buckets]
-            if "mole-images" not in bucket_names:
-                db_admin.storage.create_bucket("mole-images", options={"public": True})
-                print("[OK] Created missing Supabase bucket: 'mole-images'")
-            else:
-                print("[OK] Verified Supabase bucket: 'mole-images'")
-        except Exception as be:
-            print(f"[WARN] Could not verify/create bucket: {be}")
+        os.makedirs(STORAGE_PATH, exist_ok=True)
+        print(f"[OK] Created Storage directory: {STORAGE_PATH}")
     except Exception as e:
-        print(f"[ERROR] Failed to initialize Supabase: {e}")
-else:
-    print("[WARN] SUPABASE_URL or SUPABASE_KEY missing in .env. Storage features disabled.")
+        # Fallback cuối cùng nếu vẫn lỗi quyền ghi
+        STORAGE_ROOT = os.getcwd()
+        STORAGE_PATH = os.path.join(STORAGE_ROOT, "skinderm_storage")
+        DB_PATH = os.path.join(STORAGE_ROOT, "skinderm.db")
+        os.makedirs(STORAGE_PATH, exist_ok=True)
+        print(f"[WARN] Fallback to project directory due to error: {e}")
+
+
+def init_local_db():
+    """Khởi tạo bảng SQLite nếu chưa có."""
+    global DB_PATH
+    try:
+        conn = sqlite3.connect(DB_PATH)
+    except Exception:
+        # Nếu vẫn không mở được (ví dụ ổ D có tồn tại nhưng Read-only)
+        DB_PATH = os.path.join(os.getcwd(), "skinderm.db")
+        conn = sqlite3.connect(DB_PATH)
+        
+    try:
+        cursor = conn.cursor()
+        # Bảng lịch sử quét da
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS analysis_records (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                image_url TEXT NOT NULL,
+                risk_score REAL NOT NULL,
+                classification TEXT NOT NULL,
+                confidence REAL NOT NULL,
+                abcde TEXT, 
+                top3 TEXT,  
+                uv_index REAL,
+                temperature REAL,
+                location TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        # Bảng quản lý nốt ruồi
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS moles (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                body_part TEXT,
+                notes TEXT,
+                status TEXT DEFAULT 'monitoring',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        conn.commit()
+        conn.close()
+        print(f"[OK] Local Database initialized at {DB_PATH}")
+    except Exception as e:
+        print(f"[ERROR] Could not initialize database at {DB_PATH}: {e}")
+
+init_local_db()
+
+# Mount thư mục ảnh để có thể truy cập qua URL (ví dụ: http://localhost:8080/storage/abc.jpg)
+app.mount("/storage", StaticFiles(directory=STORAGE_PATH), name="storage")
 
 # Configure CORS
 app.add_middleware(
@@ -206,6 +254,72 @@ LABELS = ["MEL (Melanoma)", "NV (Melanocytic nevus)", "BCC (Basal cell carcinoma
           "AK (Actinic keratosis)", "BKL (Benign keratosis)", "DF (Dermatofibroma)", 
           "VASC (Vascular lesion)", "SCC (Squamous cell carcinoma)", "UNK (Unknown)"]
 
+def calculate_asymmetry(mask):
+    """Tính toán mức độ bất đối xứng của nốt ruồi."""
+    if np.sum(mask) == 0: return 0
+    
+    # Tìm tâm của vật thể
+    coords = np.column_stack(np.where(mask > 0))
+    y_min, x_min = coords.min(axis=0)
+    y_max, x_max = coords.max(axis=0)
+    
+    roi = mask[y_min:y_max+1, x_min:x_max+1]
+    h, w = roi.shape
+    
+    # Lật ảnh theo chiều dọc và ngang
+    h_flip = cv2.flip(roi, 1)
+    v_flip = cv2.flip(roi, 0)
+    
+    # So sánh sự khác biệt
+    diff_h = np.logical_xor(roi, h_flip).sum()
+    diff_v = np.logical_xor(roi, v_flip).sum()
+    
+    # Chuẩn hóa (0-100)
+    total_pixels = roi.sum()
+    score = ((diff_h + diff_v) / (2 * total_pixels)) * 100
+    return min(100, max(0, float(score)))
+
+def calculate_border(mask):
+    """Tính toán độ gồ ghề của đường viền (Circularity)."""
+    if np.sum(mask) == 0: return 0
+    
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours: return 0
+    
+    cnt = max(contours, key=cv2.contourArea)
+    area = cv2.contourArea(cnt)
+    perimeter = cv2.arcLength(cnt, True)
+    
+    if perimeter == 0: return 0
+    
+    # Chỉ số Circularity: 4*pi*A / P^2
+    # Hình tròn hoàn hảo có circularity = 1. Càng thấp càng gồ ghề.
+    circularity = (4 * np.pi * area) / (perimeter ** 2)
+    
+    # Chuyển thành thang điểm rủi ro (circularity thấp -> điểm cao)
+    score = (1.0 - circularity) * 100
+    return min(100, max(0, float(score)))
+
+def calculate_color(image_np, mask):
+    """Phân tích sự đa dạng màu sắc bên trong vùng mask."""
+    if np.sum(mask) == 0: return 0
+    
+    # Lấy các pixel bên trong mask
+    pixels = image_np[mask > 0]
+    
+    # Tính độ lệch chuẩn của các kênh màu
+    std_r = np.std(pixels[:, 0])
+    std_g = np.std(pixels[:, 1])
+    std_b = np.std(pixels[:, 2])
+    
+    # Trung bình độ lệch chuẩn
+    avg_std = (std_r + std_g + std_b) / 3.0
+    
+    # Chuẩn hóa (giả định std > 50 là rất đa dạng màu sắc)
+    score = (avg_std / 50.0) * 100
+    return min(100, max(0, float(score)))
+
+
 def process_image(image_bytes: bytes):
     if not MODEL_LOADED:
         return None
@@ -262,6 +376,21 @@ def process_image(image_bytes: bytes):
         "y": rmin / H,
         "w": (cmax - cmin) / W,
         "h": (rmax - rmin) / H
+    }
+    
+    # Calculate ABCDE features from segmentation
+    a_score = calculate_asymmetry(binary_mask)
+    b_score = calculate_border(binary_mask)
+    c_score = calculate_color(ori_img_np, binary_mask)
+    # D (Diameter): relative to image size, simplified
+    d_score = min(100, ((cmax - cmin) * (rmax - rmin) / (W * H)) * 500) 
+    
+    abcde_results = {
+        "A": a_score,
+        "B": b_score,
+        "C": c_score,
+        "D": d_score,
+        "E": 15.0 # Placeholder for single scan
     }
     
     # ----------------------------------
@@ -344,7 +473,8 @@ def process_image(image_bytes: bytes):
             score = round(float(top3_prob[i].item()) * 100, 2)
             top3.append({"label": label_name, "score": score})
         
-    return int(predicted.item()), float(confidence.item()), bbox, top3
+    return int(predicted.item()), float(confidence.item()), bbox, top3, abcde_results
+
 
 def get_current_user(authorization: str = Form(None)):
     """Helper to verify Firebase token from Form data or Header."""
@@ -387,15 +517,24 @@ async def get_user_history(authorization: str = Form(...)):
     if not user:
         return {"status": "error", "message": "Unauthorized"}, 401
     
-    
     user_id = user['uid']
-    db = admin_supabase if admin_supabase else supabase
-    if not db:
-        return {"status": "error", "message": "Supabase not configured"}, 500
-        
     try:
-        response = db.table("analysis_records").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
-        return {"status": "success", "data": response.data}
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row # Để lấy dữ liệu dạng Dictionary
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM analysis_records WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
+        rows = cursor.fetchall()
+        
+        # Chuyển đổi dữ liệu từ SQLite sang định dạng JSON mà Frontend mong đợi
+        data = []
+        for row in rows:
+            item = dict(row)
+            item['abcde'] = json.loads(item['abcde']) if item['abcde'] else None
+            item['top3'] = json.loads(item['top3']) if item['top3'] else None
+            data.append(item)
+            
+        conn.close()
+        return {"status": "success", "data": data}
     except Exception as e:
         return {"status": "error", "message": str(e)}, 500
 
@@ -421,7 +560,7 @@ async def analyze_image(
     result = process_image(contents)
     
     if result:
-        class_idx, confidence, bbox, top3 = result
+        class_idx, confidence, bbox, top3, abcde_scores = result
         classification = LABELS[class_idx] if class_idx < len(LABELS) else "Unknown"
         
         if "MEL" in classification or "BCC" in classification or "SCC" in classification:
@@ -429,60 +568,62 @@ async def analyze_image(
         else:
             base_risk = round((1.0 - confidence) * 100, 1)
             
-        # More realistic ABCDE logic based on classification and confidence
-        is_malignant = "MEL" in classification or "BCC" in classification or "SCC" in classification
-        
-        # A_score (Asymmetry): Malignant lesions are usually more asymmetric
-        a_base = 75 if is_malignant else 20
-        abcde_scores = {
-            "A_score": min(98, max(5, a_base + random.randint(-15, 15))),
-            "B_score": min(98, max(5, (80 if is_malignant else 30) + random.randint(-20, 10))),
-            "C_score": min(98, max(5, (70 if "MEL" in classification else 40) + random.randint(-10, 20))),
-            "D_score": min(98, max(5, random.randint(30, 90))),
-            "E_score": min(98, max(5, random.randint(10, 60)))
+        # Real ABCDE logic from calculation
+        abcde_final = {
+            "A_score": abcde_scores["A"],
+            "B_score": abcde_scores["B"],
+            "C_score": abcde_scores["C"],
+            "D_score": abcde_scores["D"],
+            "E_score": abcde_scores["E"]
         }
-        bbox = {"x": 0.2, "y": 0.2, "w": 0.6, "h": 0.6}
-        top3 = [
-            {"label": classification, "score": round(confidence * 100, 2)},
-            {"label": "Other prediction 1", "score": round((1 - confidence) * 50, 2)},
-            {"label": "Other prediction 2", "score": round((1 - confidence) * 30, 2)},
-        ]
+    else:
+        # Fallback if processing failed
+        return {"status": "error", "message": "Model processing failed"}, 500
 
-    # --- Save to Supabase if User is Auth ---
+
+    # --- Save to LOCAL (SQLite + Local Storage) if User is Auth ---
     user = get_current_user(authorization)
-    db = admin_supabase if admin_supabase else supabase
-    if user and db:
+    if user:
         try:
             user_id = user['uid']
-            filename = f"{user_id}/{int(time.time())}_{file.filename}"
-            # Upload to 'mole-images' bucket using Admin client to bypass RLS
-            # Bắt buộc khai báo content-type để không bị lỗi 400 Invalid Mime Type
-            content_type = file.content_type if file.content_type else "image/jpeg"
-            db.storage.from_("mole-images").upload(
-                filename, 
-                contents,
-                file_options={"content-type": content_type}
-            )
-            image_url = db.storage.from_("mole-images").get_public_url(filename)
+            # Tạo tên file duy nhất
+            ext = os.path.splitext(file.filename)[1]
+            local_filename = f"{int(time.time())}_{uuid.uuid4().hex[:8]}{ext}"
+            file_save_path = os.path.join(STORAGE_PATH, local_filename)
+            
+            # Lưu file ảnh xuống ổ D:/
+            with open(file_save_path, "wb") as f:
+                f.write(contents)
+            
+            # URL để frontend truy cập (thay thế link Supabase)
+            # Giả sử server chạy ở port 8080
+            image_url = f"http://localhost:8080/storage/{local_filename}"
 
-            # Insert into 'scans' table
-            scan_data = {
-                "user_id": user_id,
-                "image_url": image_url,
-                "risk_score": base_risk,
-                "classification": classification,
-                "confidence": round(confidence * 100 if result else confidence, 2),
-                "abcde": abcde_scores,
-                "top3": top3,
-                "uv_index": uv_index,
-                "temperature": temperature,
-                "location": location
-            }
-            # Insert into 'analysis_records' table using Admin client to bypass RLS
-            db.table("analysis_records").insert(scan_data).execute()
-            print(f"[OK] Scan saved to Supabase (User: {user_id}, Table: analysis_records, Client: {'Admin' if admin_supabase else 'Anon'})")
+            # Lưu vào SQLite
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO analysis_records 
+                (id, user_id, image_url, risk_score, classification, confidence, abcde, top3, uv_index, temperature, location)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                str(uuid.uuid4()),
+                user_id,
+                image_url,
+                base_risk,
+                classification,
+                round(confidence * 100 if result else confidence, 2),
+                json.dumps(abcde_final),
+                json.dumps(top3),
+                uv_index,
+                temperature,
+                location
+            ))
+            conn.commit()
+            conn.close()
+            print(f"[OK] Scan saved LOCALLY (D:/.db & D:/skinderm_storage)")
         except Exception as e:
-            print(f"[ERROR] Failed to save to Supabase: {e}")
+            print(f"[ERROR] Failed to save locally: {e}")
     
     # --- Generate Medical Advice using AI ---
     advice_prompt = (
@@ -513,29 +654,54 @@ async def analyze_image(
         "medical_advice": medical_advice,
         "abcde": {
             "A_asymmetry": {
-                "score": abcde_scores["A_score"],
-                "status": "High" if abcde_scores["A_score"] > 50 else "Low"
+                "score": abcde_final["A_score"],
+                "status": "High" if abcde_final["A_score"] > 50 else "Low"
             },
             "B_border": {
-                "score": abcde_scores["B_score"],
-                "status": "Abnormal" if abcde_scores["B_score"] > 50 else "Normal"
+                "score": abcde_final["B_score"],
+                "status": "Abnormal" if abcde_final["B_score"] > 50 else "Normal"
             },
             "C_color": {
-                "score": abcde_scores["C_score"],
-                "status": "Moderate" if abcde_scores["C_score"] > 50 else "Uniform"
+                "score": abcde_final["C_score"],
+                "status": "Moderate" if abcde_final["C_score"] > 50 else "Uniform"
             },
             "D_diameter": {
                 "value": round(random.uniform(3.0, 9.5), 1),
-                "score": abcde_scores["D_score"]
+                "score": abcde_final["D_score"]
             },
             "E_evolution": {
-                "score": abcde_scores["E_score"],
+                "score": abcde_final["E_score"],
                 "status": "Requires History"
             }
         },
         "bbox": bbox,
         "top3": top3
     }
+
+
+@app.post("/api/upload-avatar")
+async def upload_avatar(file: UploadFile = File(...), authorization: str = Form(None)):
+    """Upload user avatar to local storage."""
+    user = get_current_user(authorization)
+    if not user:
+        return {"status": "error", "message": "Unauthorized"}, 401
+    
+    try:
+        contents = await file.read()
+        # Create a clean filename
+        ext = os.path.splitext(file.filename)[1]
+        if not ext: ext = ".jpg"
+        
+        filename = f"avatar_{user['uid']}{ext}"
+        file_save_path = os.path.join(STORAGE_PATH, filename)
+        
+        with open(file_save_path, "wb") as f:
+            f.write(contents)
+        
+        image_url = f"http://localhost:8080/storage/{filename}"
+        return {"status": "success", "url": image_url}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
 
 
 class ChatRequest(BaseModel):

@@ -14,13 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     window.addEventListener('scroll', () => {
         if (window.scrollY > 50) {
-            navbar.style.background = 'rgba(5, 5, 5, 0.7)';
-            navbar.style.boxShadow = '0 10px 40px rgba(0, 0, 0, 0.4)';
-            navbar.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+            navbar.style.background = 'rgba(255, 255, 255, 0.8)';
+            navbar.style.backdropFilter = 'blur(10px)';
+            navbar.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.05)';
+            navbar.style.borderBottom = '1px solid rgba(0, 0, 0, 0.05)';
         } else {
-            navbar.style.background = 'rgba(255, 255, 255, 0.05)';
-            navbar.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
-            navbar.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+            navbar.style.background = 'transparent';
+            navbar.style.boxShadow = 'none';
+            navbar.style.borderBottom = 'none';
         }
     });
 

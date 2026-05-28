@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skinderm AI - Documentation</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome/Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/docs.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar has-mega-menu">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="index.html" class="logo">
+                    <i class="fa-solid fa-microscope" style="margin-right: 8px;"></i>
+                    Skinderm AI
+                </a>
+            </div>
+            
+            <div class="nav-center">
+                <ul class="mega-menu-nav">
+                    <li class="mega-item">
+                        <a href="#">Sản phẩm <i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; margin-left: 6px; transform: translateY(-1px); display: inline-block;"></i></a>
+                        <div class="mega-dropdown">
+                            <div class="mega-content">
+                                <div class="mega-col">
+                                    <h4>Giải pháp Y tế</h4>
+                                    <ul>
+                                        <li><a href="index.html#features">Sàng lọc lâm sàng tự động</a></li>
+                                        <li><a href="index.html#features">Phân tích ABCDE chi tiết</a></li>
+                                        <li><a href="index.html#features">Tích hợp HIS/EMR nội bộ</a></li>
+                                    </ul>
+                                </div>
+                                <div class="mega-col">
+                                    <h4>Nền tảng Tích hợp</h4>
+                                    <ul>
+                                        <li><a href="#endpoints">REST API Endpoints</a></li>
+                                        <li><a href="#sdks">SDKs & Component React/Vue</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="mega-item">
+                        <a href="#">Nghiên cứu <i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; margin-left: 6px; transform: translateY(-1px); display: inline-block;"></i></a>
+                        <div class="mega-dropdown">
+                            <div class="mega-content">
+                                <div class="mega-col">
+                                    <h4>Trí tuệ nhân tạo (AI)</h4>
+                                    <ul>
+                                        <li><a href="#architecture">Kiến trúc ConvNeXtV2</a></li>
+                                        <li><a href="#performance">Đánh giá độ chính xác 98%</a></li>
+                                        <li><a href="#xai">Sơ đồ nhiệt Grad-CAM</a></li>
+                                    </ul>
+                                </div>
+                                <div class="mega-col">
+                                    <h4>Dữ liệu & An toàn</h4>
+                                    <ul>
+                                        <li><a href="#privacy">Mã hóa chuẩn Y khoa (HIPAA)</a></li>
+                                        <li><a href="#">Tập dữ liệu chuẩn hóa ISIC</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="mega-item">
+                        <a href="docs.html" class="active">Tài liệu</a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="nav-right">
+                <div class="nav-search-bar" id="navSearchBarContainer">
+                    <i class="fa-solid fa-search search-icon"></i>
+                    <input type="text" id="navSearchInput" placeholder="What are you looking for?" autocomplete="off">
+                    <div class="search-shortcuts">
+                        <kbd>⌘</kbd> <kbd>/</kbd>
+                    </div>
+                    
+                    <div class="search-results-dropdown" id="searchResultsDropdown">
+                        <div class="search-results-list" id="searchResultsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Gradient Background -->
+    <div class="docs-bg-gradient"></div>
+
+    <!-- Main Layout -->
+    <div class="docs-layout">
+        <!-- Sidebar -->
+        <aside class="docs-sidebar">
+
+
+            <div class="sidebar-group">
+                <h3>Getting Started</h3>
+                <ul>
+                    <li><a href="#overview" class="active">Overview</a></li>
+                    <li><a href="#quickstart">Quickstart</a></li>
+                    <li><a href="#best-practices">Imaging Best Practices</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-group">
+                <h3>Developer & API</h3>
+                <ul>
+                    <li><a href="#authentication">Authentication</a></li>
+                    <li><a href="#endpoints">API Endpoints</a></li>
+                    <li><a href="#sdks">SDKs & Snippets</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-group">
+                <h3>AI Science</h3>
+                <ul>
+                    <li><a href="#architecture">Model Architecture</a></li>
+                    <li><a href="#performance">Performance Metrics</a></li>
+                    <li><a href="#xai">Explainable AI (XAI)</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-group">
+                <h3>Legal & Compliance</h3>
+                <ul>
+                    <li><a href="#privacy">Data Privacy (HIPAA/GDPR)</a></li>
+                    <li><a href="#disclaimer">Medical Disclaimer</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="docs-content">
+            <div class="content-header">
+                <span class="badge">Documentation</span>
+                <h1 class="content-title">Skinderm AI Documentation</h1>
+                <p class="content-desc">Everything you need to integrate, deploy, and understand the medical-grade skin cancer diagnostic API.</p>
+            </div>
+
+            <section id="quickstart" class="doc-section">
+                <h2>Quickstart</h2>
+                <p>Get started with Skinderm AI in less than 5 minutes. Follow these three steps to integrate our diagnostic engine into your workflow.</p>
+                
+                <div class="step-list">
+                    <div class="step-item">
+                        <div class="step-num">1</div>
+                        <div class="step-text">
+                            <strong>Generate API Key:</strong> Go to the <a href="auth.html">Dashboard</a> and create a new project key.
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">2</div>
+                        <div class="step-text">
+                            <strong>Prepare Image:</strong> Ensure the lesion is centered and well-lit (see <a href="#best-practices">Best Practices</a>).
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">3</div>
+                        <div class="step-text">
+                            <strong>Call Endpoint:</strong> Send a POST request to <code>/v1/analyze</code> with your image file.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="best-practices" class="doc-section">
+                <h2>Imaging Best Practices</h2>
+                <p>To ensure maximum diagnostic accuracy (up to 98%), please adhere to the following imaging standards:</p>
+                <ul>
+                    <li><strong>Lighting:</strong> Use natural daylight or diffuse LED lighting. Avoid direct camera flash which causes glare on skin surface.</li>
+                    <li><strong>Focus:</strong> Use macro-mode if available. The lesion must be in sharp focus. Blurry images will be rejected by the pre-processing layer.</li>
+                    <li><strong>Background:</strong> Place the lesion against a neutral skin background. Remove hair if possible using surgical tape or scissors.</li>
+                    <li><strong>Scale:</strong> Include a reference scale (ruler or coin) near the lesion for size estimation.</li>
+                </ul>
+            </section>
+
+            <section id="authentication" class="doc-section">
+                <h2>Authentication</h2>
+                <p>All API requests must be authenticated using a Bearer token. You can generate an API key from your Skinderm dashboard.</p>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <div class="dots">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                        <span class="filename">cURL</span>
+                    </div>
+                    <pre><code>curl -X POST https://api.skinderm.ai/v1/analyze \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@/path/to/lesion.jpg"</code></pre>
+                </div>
+            </section>
+
+            <section id="endpoints" class="doc-section">
+                <h2>API Endpoints</h2>
+                <p>Our REST API provides a simple interface for diagnostic analysis.</p>
+                
+                <div class="endpoint-card">
+                    <div class="endpoint-method post">POST</div>
+                    <div class="endpoint-url">/v1/analyze</div>
+                </div>
+                <p>Analyzes a dermatological image and returns risk scores, ABCDE metrics, and a diagnostic classification.</p>
+                
+                <h4 class="mt-4">Response Example</h4>
+                <div class="code-block">
+                    <div class="code-header">
+                        <div class="dots"></div>
+                        <span class="filename">JSON</span>
+                    </div>
+                    <pre><code>{
+  "status": "success",
+  "data": {
+    "classification": "Melanoma",
+    "risk_score": 89.5,
+    "abcde": {
+      "A_asymmetry": { "score": 85, "status": "High Risk" },
+      "B_border": { "score": 72, "status": "Irregular" },
+      "C_color": { "score": 91, "status": "Variegated" }
+    }
+  }
+}</code></pre>
+                </div>
+            </section>
+
+            <section id="sdks" class="doc-section">
+                <h2>SDKs & Snippets</h2>
+                <p>We provide official libraries for major platforms to accelerate your development.</p>
+                <div class="sdk-grid">
+                    <div class="sdk-card">
+                        <i class="fa-brands fa-python"></i>
+                        <span>Python SDK</span>
+                    </div>
+                    <div class="sdk-card">
+                        <i class="fa-brands fa-node-js"></i>
+                        <span>Node.js Lib</span>
+                    </div>
+                    <div class="sdk-card">
+                        <i class="fa-brands fa-react"></i>
+                        <span>React Hooks</span>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="architecture" class="doc-section">
+                <h2>Model Architecture</h2>
+                <p>Skinderm uses a custom-trained <strong>ConvNeXtV2</strong> architecture, optimized for high-resolution 448x448px inputs. This allows the network to identify microscopic cellular patterns such as atypical pigment networks or blue-white veils.</p>
+                
+                <div class="architecture-visual">
+                    <div class="arch-box">Input Image (448x448)</div>
+                    <div class="arch-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                    <div class="arch-box highlight">ConvNeXtV2 Core Backbone</div>
+                    <div class="arch-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                    <div class="arch-box">Global Average Pooling</div>
+                    <div class="arch-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                    <div class="arch-grid">
+                        <div class="arch-box small">Risk Classifier (Softmax)</div>
+                        <div class="arch-box small">ABCDE Regressor</div>
+                        <div class="arch-box small">Grad-CAM Generator</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="performance" class="doc-section">
+                <h2>Performance Metrics</h2>
+                <p>Our model is evaluated on the <strong>ISIC 2024</strong> benchmark, demonstrating state-of-the-art performance across diverse skin tones (Fitzpatrick scales I-VI).</p>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                            <th>Skinderm AI</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Accuracy</td>
+                            <td>98.2%</td>
+                            <td><div class="bar-fill" style="width: 98%;"></div></td>
+                        </tr>
+                        <tr>
+                            <td>Sensitivity</td>
+                            <td>96.5%</td>
+                            <td><div class="bar-fill" style="width: 96%;"></div></td>
+                        </tr>
+                        <tr>
+                            <td>Specificity</td>
+                            <td>94.1%</td>
+                            <td><div class="bar-fill" style="width: 94%;"></div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="xai" class="doc-section">
+                <h2>Explainable AI (XAI)</h2>
+                <p>Trust is critical in medical AI. Skinderm utilizes <strong>Grad-CAM (Gradient-weighted Class Activation Mapping)</strong> to highlight the exact visual features that led to a specific diagnosis.</p>
+                <div class="info-card">
+                    <div class="info-icon"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="info-text">
+                        <h4>Transparency First</h4>
+                        <p>Every analysis result returns a heatmap overlay. If the AI flags a lesion as "High Risk", you can visually confirm if it's focusing on the lesion or accidental artifacts like hair or shadows.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="privacy" class="doc-section">
+                <h2>Data Privacy (HIPAA/GDPR)</h2>
+                <p>Your data security is our top priority. We implement enterprise-grade protection for all PHI (Protected Health Information).</p>
+                <ul>
+                    <li><strong>End-to-End Encryption:</strong> All images are encrypted using AES-256 both at rest and in transit (TLS 1.3).</li>
+                    <li><strong>Automatic Anonymization:</strong> Our pre-processing pipeline automatically crops images to the lesion area, removing any potentially identifying features (faces, tattoos, background environment).</li>
+                    <li><strong>No-Log Policy:</strong> We do not store clinical images by default unless explicitly requested for longitudinal tracking by the healthcare provider.</li>
+                </ul>
+            </section>
+
+            <section id="disclaimer" class="doc-section">
+                <h2>Medical Disclaimer</h2>
+                <p class="disclaimer-text"><strong>IMPORTANT:</strong> Skinderm AI is a clinical decision support tool designed to assist healthcare professionals. It is <u>not</u> a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of a qualified dermatologist for any skin condition. Do not delay seeking medical advice because of information provided by this tool.</p>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        // Simple script to handle active states in sidebar
+        const links = document.querySelectorAll('.sidebar-group a');
+        links.forEach(link => {
+            link.addEventListener('click', function() {
+                links.forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Update Search Data regularly or on load
+        function updateSearchData() {
+            const sections = document.querySelectorAll('.doc-section');
+            return Array.from(sections).map(section => {
+                return {
+                    id: section.id,
+                    title: section.querySelector('h2') ? section.querySelector('h2').innerText : 'Section',
+                    content: section.innerText.replace(/\n/g, ' '),
+                    element: section
+                };
+            });
+        }
+        
+        let searchData = updateSearchData();
+
+        function performSearch(query) {
+            query = query.toLowerCase().trim();
+            if (!query) {
+                searchDropdown.classList.remove('show');
+                return;
+            }
+
+            const results = searchData.filter(item => {
+                return item.title.toLowerCase().includes(query) || item.content.toLowerCase().includes(query);
+            });
+
+            renderResults(results, query);
+        }
+
+        function renderResults(results, query) {
+            searchList.innerHTML = '';
+            
+            if (results.length === 0) {
+                searchList.innerHTML = '<div class="search-no-result">No results found for "'+query+'"</div>';
+            } else {
+                results.forEach(res => {
+                    const el = document.createElement('a');
+                    el.href = '#' + res.id;
+                    el.className = 'search-result-item';
+                    
+                    const highlightedTitle = res.title.replace(new RegExp(query, 'gi'), match => `<mark>${match}</mark>`);
+                    
+                    let snippet = '';
+                    const matchIndex = res.content.toLowerCase().indexOf(query);
+                    if(matchIndex > -1) {
+                        const start = Math.max(0, matchIndex - 40);
+                        const end = Math.min(res.content.length, matchIndex + query.length + 40);
+                        snippet = '...' + res.content.substring(start, end).replace(new RegExp(query, 'gi'), match => `<mark>${match}</mark>`) + '...';
+                    } else {
+                        snippet = res.content.substring(0, 80) + '...';
+                    }
+
+                    el.innerHTML = `
+                        <div class="res-title">${highlightedTitle}</div>
+                        <div class="res-snippet">${snippet}</div>
+                    `;
+                    
+                    el.addEventListener('click', () => {
+                        searchDropdown.classList.remove('show');
+                        searchInput.value = '';
+                    });
+                    
+                    searchList.appendChild(el);
+                });
+            }
+            
+            searchDropdown.classList.add('show');
+        }
+
+        searchInput.addEventListener('input', (e) => {
+            performSearch(e.target.value);
+        });
+
+        // Scroll Spy Logic
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.3
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    document.querySelectorAll('.sidebar-group a').forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+                    });
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.doc-section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if(!document.getElementById('navSearchBarContainer').contains(e.target)) {
+                searchDropdown.classList.remove('show');
+            }
+        });
+
+        // Keyboard Shortcut Cmd+K or Ctrl+/
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === '/')) {
+                e.preventDefault();
+                searchInput.focus();
+            }
+        });
+    </script>
+</body>
+</html>

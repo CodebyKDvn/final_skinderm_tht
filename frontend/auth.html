@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DermAI - Authentication</title>
+    <title>Skinderm AI - Authentication</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -266,7 +266,7 @@
         <!-- Form Đăng nhập -->
         <div class="form-container sign-in">
             <form id="loginForm">
-                <h1 style="margin-bottom: 20px;">Đăng nhập SkinGuard</h1>
+                <h1 style="margin-bottom: 20px;">Đăng nhập Skinderm AI</h1>
                 <input type="email" id="loginEmail" placeholder="Email" required>
                 <input type="password" id="loginPass" placeholder="Mật khẩu" required>
                 <a href="#">Quên mật khẩu?</a>
@@ -285,7 +285,7 @@
                     <button class="hidden" id="login">Đăng nhập</button>
                 </div>
                 <div class="toggle-panel toggle-right">
-                    <h1 style="color: #fff;">Tạo hồ sơ DermAI</h1>
+                    <h1 style="color: #fff;">Tạo hồ sơ Skinderm AI</h1>
                     <p style="color: #eee;">Đăng ký để lưu trữ kết quả và phân tích tổn thương da</p>
                     <button class="hidden" id="register">Đăng ký</button>
                 </div>
@@ -295,11 +295,11 @@
 
     <!-- Firebase SDK Logic -->
     <script type="module">
-        import { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from './js/firebase-config.js';
+        import { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, updateProfile } from './js/firebase-config.js';
 
         // Check if already logged in (redirect to app)
         onAuthStateChanged(auth, (user) => {
-            if (user) {
+            if (user && user.displayName) {
                 window.location.href = 'app.html';
             }
         });
@@ -350,6 +350,7 @@
 
         signupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const name = document.getElementById('signupName').value;
             const email = document.getElementById('signupEmail').value;
             const pass = document.getElementById('signupPass').value;
             
@@ -357,8 +358,12 @@
             signupSpinner.style.display = 'inline-block';
             
             try {
-                await createUserWithEmailAndPassword(auth, email, pass);
-                // The onAuthStateChanged listener will handle the redirect
+                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                await updateProfile(userCredential.user, {
+                    displayName: name
+                });
+                // Redirect will be handled by onAuthStateChanged
+                window.location.href = 'app.html';
             } catch (error) {
                 console.error("Signup Error:", error);
                 let msg = "Lỗi tạo tài khoản.";
