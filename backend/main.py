@@ -572,6 +572,7 @@ class AnalyzeResponse(BaseModel):
 
 @app.post("/api/analyze", response_model=AnalyzeResponse)
 async def analyze_image(
+    request: Request,
     file: UploadFile = File(...), 
     authorization: str = Form(None),
     uv_index: float = Form(None),
@@ -626,8 +627,9 @@ async def analyze_image(
         overlay_pil.save(heatmap_save_path)
         
         # URLs for frontend
-        image_url = f"http://localhost:8080/storage/{local_filename}"
-        heatmap_url = f"http://localhost:8080/storage/{heatmap_filename}"
+        base_url = str(request.base_url).rstrip("/")
+        image_url = f"{base_url}/storage/{local_filename}"
+        heatmap_url = f"{base_url}/storage/{heatmap_filename}"
     except Exception as e:
         print(f"[ERROR] Failed to save images locally: {e}")
         image_url = ""
@@ -724,7 +726,7 @@ async def analyze_image(
 
 
 @app.post("/api/upload-avatar")
-async def upload_avatar(file: UploadFile = File(...), authorization: str = Form(None)):
+async def upload_avatar(request: Request, file: UploadFile = File(...), authorization: str = Form(None)):
     """Upload user avatar to local storage."""
     user = get_current_user(authorization)
     if not user:
@@ -742,7 +744,8 @@ async def upload_avatar(file: UploadFile = File(...), authorization: str = Form(
         with open(file_save_path, "wb") as f:
             f.write(contents)
         
-        image_url = f"http://localhost:8080/storage/{filename}"
+        base_url = str(request.base_url).rstrip("/")
+        image_url = f"{base_url}/storage/{filename}"
         return {"status": "success", "url": image_url}
     except Exception as e:
         return {"status": "error", "message": str(e)}, 500
