@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.history = historyRes.data.map(item => ({
                     id: item.id,
                     date: new Date(item.created_at).toLocaleString('vi-VN'),
-                    image: item.image_url,
+                    image: item.heatmap_url || item.image_url,
                     risk: item.risk_score,
                     diagnosis: item.classification,
                     details: item
@@ -331,6 +331,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('scanDetailModal').classList.add('hidden');
             });
         }
+
+        const btnCloseBlogModal = document.getElementById('btnCloseBlogModal');
+        if (btnCloseBlogModal) {
+            btnCloseBlogModal.addEventListener('click', () => {
+                document.getElementById('blogDetailModal').classList.add('hidden');
+            });
+        }
+
+        // Blog "Đọc tiếp" Click Handler (using event delegation on exploreGrid)
+        const exploreGrid = document.getElementById('exploreGrid');
+        if (exploreGrid) {
+            exploreGrid.addEventListener('click', (e) => {
+                const readBtn = e.target.closest('.btn-read-blog');
+                if (readBtn) {
+                    const index = parseInt(readBtn.dataset.index);
+                    showBlogDetail(index);
+                }
+            });
+        }
     }
 
     // --- HELPER FUNCTIONS ---
@@ -341,7 +360,10 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.switchSection(sectionId, navItems, sections);
         
         if (sectionId === 'sec-scan') SCAN.stopCamera();
-        if (sectionId === 'sec-monitor') CHARTS.renderMonitorCharts(document.getElementById('monitorTrendChart'));
+        if (sectionId === 'sec-monitor') {
+            CHARTS.renderMonitorCharts(document.getElementById('monitorTrendChart'));
+            updateComparisonView();
+        }
         if (sectionId === 'sec-home') updateHomeGreeting();
         if (sectionId === 'sec-doctor') document.getElementById('chatInput').focus();
     }
@@ -398,6 +420,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('viewCamera').classList.add('hidden');
         document.getElementById('viewPreview').classList.remove('hidden');
         document.getElementById('imgPreview').src = state.lastCapturedImage;
+        // Hide heatmap toggle overlay until analysis completes successfully
+        document.getElementById('heatmapToggleOverlay').classList.add('hidden');
     }
 
     async function startAnalysis() {
@@ -447,11 +471,38 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('medicalAdvice').innerHTML = marked.parse(CHAT.processAIContent(data.medical_advice || "Chưa có lời khuyên."));
         renderABCDEChart(data.abcde);
 
+        // Show and configure the premium original/heatmap toggle overlay
+        if (data.heatmap_url) {
+            document.getElementById('imgPreview').src = data.heatmap_url;
+            const toggleOverlay = document.getElementById('heatmapToggleOverlay');
+            if (toggleOverlay) {
+                toggleOverlay.classList.remove('hidden');
+                const btnOrig = document.getElementById('btnPreviewShowOriginal');
+                const btnHeat = document.getElementById('btnPreviewShowHeatmap');
+                const previewImg = document.getElementById('imgPreview');
+
+                btnHeat.classList.add('btn-blue');
+                btnOrig.classList.remove('btn-blue');
+
+                btnOrig.onclick = () => {
+                    previewImg.src = state.lastCapturedImage;
+                    btnOrig.classList.add('btn-blue');
+                    btnHeat.classList.remove('btn-blue');
+                };
+
+                btnHeat.onclick = () => {
+                    previewImg.src = data.heatmap_url;
+                    btnHeat.classList.add('btn-blue');
+                    btnOrig.classList.remove('btn-blue');
+                };
+            }
+        }
+
         // Add to history state locally for immediate update
         const newRecord = {
             id: Date.now(),
             date: new Date().toLocaleString('vi-VN'),
-            image: state.lastCapturedImage,
+            image: data.heatmap_url || state.lastCapturedImage,
             risk: score,
             diagnosis: data.classification,
             details: data
@@ -492,12 +543,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!tbody) return;
         
         if (!state.history.length) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:4rem; color:var(--text-muted)">Chưa có dữ liệu lịch sử.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:4rem; color:var(--text-muted)">Chưa có dữ liệu lịch sử.</td></tr>';
             return;
         }
 
         tbody.innerHTML = state.history.map(item => `
             <tr>
+                <td style="text-align: center;">
+                    <input type="checkbox" class="compare-checkbox" data-id="${item.id}" ${state.compareSelection.includes(String(item.id)) ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer; display: block; margin: 0 auto;">
+                </td>
                 <td><img src="${item.image}" style="width: 44px; height: 44px; border-radius: 8px; object-fit: cover;"></td>
                 <td style="font-size: 0.85rem;">${item.date}</td>
                 <td><strong>${item.diagnosis}</strong></td>
@@ -511,6 +565,93 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.querySelectorAll('.btn-detail').forEach(btn => {
             btn.addEventListener('click', () => showScanDetail(btn.dataset.id));
         });
+
+        tbody.querySelectorAll('.compare-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const id = String(cb.dataset.id);
+                if (cb.checked) {
+                    if (state.compareSelection.length >= 2) {
+                        alert("Bạn chỉ có thể chọn tối đa 2 hình ảnh để so sánh.");
+                        cb.checked = false;
+                        return;
+                    }
+                    if (!state.compareSelection.includes(id)) {
+                        state.compareSelection.push(id);
+                    }
+                } else {
+                    state.compareSelection = state.compareSelection.filter(item => item !== id);
+                }
+                updateComparisonView();
+            });
+        });
+    }
+
+    function updateComparisonView() {
+        const compareEmpty = document.getElementById('compareEmpty');
+        const compareGrid = document.getElementById('compareGrid');
+        const compDate1 = document.getElementById('compDate1');
+        const compDate2 = document.getElementById('compDate2');
+        const compImg1 = document.getElementById('compImg1');
+        const compImg2 = document.getElementById('compImg2');
+
+        if (!compareEmpty || !compareGrid) return;
+
+        if (state.compareSelection.length === 2) {
+            compareEmpty.classList.add('hidden');
+            compareGrid.classList.remove('hidden');
+
+            const item1 = state.history.find(h => String(h.id) === String(state.compareSelection[0]));
+            const item2 = state.history.find(h => String(h.id) === String(state.compareSelection[1]));
+
+            if (item1 && item2) {
+                // Sort chronologically (oldest on left, newest on right)
+                const items = [item1, item2].sort((a, b) => a.id - b.id);
+
+                compDate1.innerHTML = `Lượt 1 - Ngày: ${items[0].date}<br><span style="color:var(--text-secondary); font-size:0.8rem; font-weight:500;">Chẩn đoán: ${items[0].diagnosis} (${items[0].risk}%)</span>`;
+                compImg1.src = items[0].image;
+
+                compDate2.innerHTML = `Lượt 2 - Ngày: ${items[1].date}<br><span style="color:var(--text-secondary); font-size:0.8rem; font-weight:500;">Chẩn đoán: ${items[1].diagnosis} (${items[1].risk}%)</span>`;
+                compImg2.src = items[1].image;
+
+                // Load AI comparative progression report
+                const reportContainer = document.getElementById('compareReportContent');
+                if (reportContainer) {
+                    reportContainer.innerHTML = `
+                        <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                            <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px; color: var(--medical-blue-base);"></i> Đang phân tích so sánh tiến triển bằng AI...
+                        </div>
+                    `;
+
+                    API.compareScans(items[0].details, items[1].details)
+                        .then(res => {
+                            if (res.status === 'success') {
+                                reportContainer.innerHTML = marked.parse(res.report);
+                            } else {
+                                reportContainer.innerHTML = `<div style="color:var(--danger); text-align:center; padding:1.5rem;"><i class="fa-solid fa-triangle-exclamation"></i> Không thể tạo báo cáo so sánh: ${res.message}</div>`;
+                            }
+                        })
+                        .catch(err => {
+                            reportContainer.innerHTML = `<div style="color:var(--danger); text-align:center; padding:1.5rem;"><i class="fa-solid fa-triangle-exclamation"></i> Lỗi kết nối hệ thống AI: ${err.message}</div>`;
+                        });
+                }
+            }
+        } else {
+            compareGrid.classList.add('hidden');
+            compareEmpty.classList.remove('hidden');
+
+            if (state.compareSelection.length === 1) {
+                compareEmpty.innerHTML = `
+                    <i class="fa-solid fa-code-compare fa-2x mb-2" style="color: var(--medical-blue-base);"></i>
+                    <p style="font-weight:600; color:var(--text-primary);">Đã chọn 1 hình ảnh</p>
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin-top:4px;">Vui lòng chọn thêm 1 hình ảnh khác từ Lịch sử để tiến hành so sánh song song.</p>
+                `;
+            } else {
+                compareEmpty.innerHTML = `
+                    <i class="fa-solid fa-code-compare fa-2x mb-2"></i>
+                    <p>Vui lòng chọn 2 ảnh từ Lịch sử để thực hiện so sánh.</p>
+                `;
+            }
+        }
     }
 
     function renderRecentActivity() {
@@ -540,26 +681,46 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderBlogPosts() {
         const grid = document.getElementById('exploreGrid');
         if (!grid) return;
-        grid.innerHTML = state.blogPosts.map((post, index) => `
-            <div class="blog-item fade-in">
-                <img src="${post.img}" class="blog-img">
-                <div class="blog-content">
-                    <span class="blog-category">${post.category}</span>
-                    <h3 class="blog-title">${post.title}</h3>
-                    <p class="blog-desc">${post.desc}</p>
-                    <button class="btn-pill btn-read-blog" data-index="${index}" style="margin-top: 1rem; border: 1px solid var(--border-light); font-size: 0.8rem; background: var(--bg-app);">Đọc tiếp</button>
+        grid.innerHTML = state.blogPosts.map((post, index) => {
+            const imgUrl = post.img || 'https://images.unsplash.com/photo-1576091160550-2173dad99901?q=80&w=800';
+            return `
+                <div class="blog-item fade-in">
+                    <img src="${imgUrl}" class="blog-img" onerror="this.src='https://images.unsplash.com/photo-1576091160550-2173dad99901?q=80&w=800'">
+                    <div class="blog-content">
+                        <span class="blog-category">${post.category}</span>
+                        <h3 class="blog-title">${post.title}</h3>
+                        <p class="blog-desc">${post.desc}</p>
+                        <button class="btn-pill btn-read-blog" data-index="${index}" style="margin-top: 1rem; border: 1px solid var(--border-light); font-size: 0.8rem; background: var(--bg-app);">Đọc tiếp</button>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     function showScanDetail(id) {
         const item = state.history.find(h => String(h.id) === String(id));
         if (!item) return;
+
+        const origImg = item.details?.image_url || item.image;
+        const heatImg = item.details?.heatmap_url || item.image;
+
         document.getElementById('scanDetailModal').classList.remove('hidden');
         document.getElementById('modalBody').innerHTML = `
-            <div style="text-align: center; margin-bottom: 1.5rem;">
-                <img src="${item.image}" style="width: 100%; max-width: 400px; border-radius: 12px; box-shadow: var(--shadow-md);">
+            <div style="text-align: center; margin-bottom: 1.5rem; position: relative; display: flex; flex-direction: column; align-items: center;">
+                <div style="min-height: 250px; background: rgba(15, 23, 42, 0.95); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; width: 100%; max-width: 400px; padding: 10px;">
+                    <img id="modalDetailImage" src="${heatImg}" style="max-width: 100%; max-height: 350px; border-radius: 12px; box-shadow: var(--shadow-md); object-fit: contain; transition: all 0.3s ease;">
+                </div>
+                
+                ${origImg !== heatImg ? `
+                <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 8px;">
+                    <button class="btn-pill" id="btnDetailShowOriginal" style="font-size: 0.8rem; background: var(--bg-app); border: 1px solid var(--border-light); padding: 6px 12px; cursor: pointer;">
+                        Ảnh gốc
+                    </button>
+                    <button class="btn-pill btn-blue" id="btnDetailShowHeatmap" style="font-size: 0.8rem; padding: 6px 12px; cursor: pointer;">
+                        Bản đồ nhiệt AI
+                    </button>
+                </div>
+                ` : ''}
             </div>
             <div class="grid-2" style="gap: 1.5rem;">
                 <div class="card-glass" style="padding: 1.5rem;">
@@ -574,6 +735,64 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
         `;
+
+        // Add event listeners for toggling
+        const btnOrig = document.getElementById('btnDetailShowOriginal');
+        const btnHeat = document.getElementById('btnDetailShowHeatmap');
+        const modalImg = document.getElementById('modalDetailImage');
+
+        if (btnOrig && btnHeat && modalImg) {
+            btnOrig.onclick = () => {
+                modalImg.src = origImg;
+                btnOrig.classList.add('btn-blue');
+                btnOrig.style.background = '';
+                btnOrig.style.border = '';
+                btnOrig.style.color = '';
+
+                btnHeat.classList.remove('btn-blue');
+                btnHeat.style.background = 'var(--bg-app)';
+                btnHeat.style.border = '1px solid var(--border-light)';
+                btnHeat.style.color = 'var(--text-secondary)';
+            };
+
+            btnHeat.onclick = () => {
+                modalImg.src = heatImg;
+                btnHeat.classList.add('btn-blue');
+                btnHeat.style.background = '';
+                btnHeat.style.border = '';
+                btnHeat.style.color = '';
+
+                btnOrig.classList.remove('btn-blue');
+                btnOrig.style.background = 'var(--bg-app)';
+                btnOrig.style.border = '1px solid var(--border-light)';
+                btnOrig.style.color = 'var(--text-secondary)';
+            };
+        }
+    }
+
+    function showBlogDetail(index) {
+        const post = state.blogPosts[index];
+        if (!post) return;
+        
+        const modal = document.getElementById('blogDetailModal');
+        const modalBody = document.getElementById('blogModalBody');
+        if (!modal || !modalBody) return;
+        
+        const imgUrl = post.img || 'https://images.unsplash.com/photo-1576091160550-2173dad99901?q=80&w=800';
+        
+        modalBody.innerHTML = `
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <img src="${imgUrl}" onerror="this.src='https://images.unsplash.com/photo-1576091160550-2173dad99901?q=80&w=800'" style="width: 100%; max-height: 350px; object-fit: cover; border-radius: 12px; box-shadow: var(--shadow-md);">
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;">
+                <span class="pill pill-success" style="background: var(--medical-blue-light); color: var(--medical-blue-dark); font-size: 0.8rem; padding: 4px 12px; font-weight: 600;">${post.category}</span>
+            </div>
+            <h2 style="font-weight: 800; font-size: 1.5rem; line-height: 1.3; margin-bottom: 1rem; color: var(--text-primary);">${post.title}</h2>
+            <div class="blog-full-content" style="color: var(--text-secondary); line-height: 1.7; font-size: 0.95rem; margin-top: 1rem;">
+                ${post.content || `<p>${post.desc}</p>`}
+            </div>
+        `;
+        modal.classList.remove('hidden');
     }
 
     function handleChatSend() {

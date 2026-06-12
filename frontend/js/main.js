@@ -27,6 +27,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Hamburger Menu Toggle
+    const hamburgerBtn = document.getElementById('hamburgerMenuBtn');
+    const mobileDrawer = document.getElementById('mobileMenuDrawer');
+    const mobileLinks = document.querySelectorAll('.mobile-nav-link');
+
+    if (hamburgerBtn && mobileDrawer) {
+        hamburgerBtn.addEventListener('click', () => {
+            hamburgerBtn.classList.toggle('active');
+            mobileDrawer.classList.toggle('active');
+            document.body.classList.toggle('no-scroll');
+        });
+
+        // Close drawer when clicking a link
+        mobileLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                hamburgerBtn.classList.remove('active');
+                mobileDrawer.classList.remove('active');
+                document.body.classList.remove('no-scroll');
+            });
+        });
+    }
+
     // Scroll Spy
     const sections = document.querySelectorAll('header, section');
     const navLinks = document.querySelectorAll('.nav-links a');

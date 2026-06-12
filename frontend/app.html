@@ -186,9 +186,13 @@
 
                         <!-- Preview View -->
                         <div id="viewPreview" class="hidden" style="flex: 1; display: flex; flex-direction: column;">
-                            <div class="preview-container" id="previewContainer" style="flex: 1;">
-                                <img src="" id="imgPreview" alt="Skin Lesion" style="height: 100%; object-fit: cover;">
+                            <div class="preview-container" id="previewContainer" style="flex: 1; min-height: 380px; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.95); border-radius: 24px; overflow: hidden; position: relative;">
+                                <img src="" id="imgPreview" alt="Skin Lesion" style="max-height: 100%; max-width: 100%; object-fit: contain; display: block; border-radius: 12px;">
                                 <div class="scan-laser"></div>
+                                <div id="heatmapToggleOverlay" class="hidden" style="position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; gap: 8px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                    <button class="btn-pill" id="btnPreviewShowOriginal" style="font-size: 0.75rem; padding: 4px 10px; background: transparent; border: none; color: white; cursor: pointer;">Ảnh gốc</button>
+                                    <button class="btn-pill btn-blue" id="btnPreviewShowHeatmap" style="font-size: 0.75rem; padding: 4px 10px; cursor: pointer;">Bản đồ nhiệt AI</button>
+                                </div>
                             </div>
                             <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                                 <button class="btn-pill btn-blue" style="flex: 1; justify-content: center;" id="btnStartAnalyze"><i class="fa-solid fa-microscope"></i> <span data-i18n="btn_analyze">Bắt đầu phân tích AI</span></button>
@@ -269,7 +273,7 @@
                         <i class="fa-solid fa-code-compare fa-2x mb-2"></i>
                         <p>Vui lòng chọn 2 ảnh từ Lịch sử để thực hiện so sánh.</p>
                     </div>
-                    <div class="monitor-compare-grid hidden" id="compareGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div class="monitor-compare-grid hidden" id="compareGrid">
                         <div style="background: var(--bg-app); padding: 1rem; border-radius: 16px;">
                             <p id="compDate1" style="font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; color: var(--medical-blue-dark);">Ngày: --</p>
                             <img id="compImg1" src="" style="width: 100%; border-radius: 12px; box-shadow: var(--shadow-sm);">
@@ -277,6 +281,18 @@
                         <div style="background: var(--bg-app); padding: 1rem; border-radius: 16px;">
                             <p id="compDate2" style="font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; color: var(--medical-blue-dark);">Ngày: --</p>
                             <img id="compImg2" src="" style="width: 100%; border-radius: 12px; box-shadow: var(--shadow-sm);">
+                        </div>
+                        
+                        <!-- AI Progression Analysis Report Card -->
+                        <div style="grid-column: 1 / -1; margin-top: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 20px; padding: 1.5rem; box-shadow: var(--shadow-sm);">
+                            <h4 style="font-size: 1.1rem; color: var(--medical-blue-dark); font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px;">
+                                <i class="fa-solid fa-brain" style="color: var(--medical-blue-base)"></i> Báo cáo So sánh & Tiến triển Y khoa từ AI
+                            </h4>
+                            <div id="compareReportContent" class="msg-final-content" style="font-size: 0.95rem; line-height: 1.7; color: var(--text-primary);">
+                                <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                                    <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px; color: var(--medical-blue-base);"></i> Đang phân tích tiến triển bằng AI...
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -293,6 +309,7 @@
                     <table class="history-table">
                         <thead>
                             <tr>
+                                <th style="width: 80px; text-align: center;">So sánh</th>
                                 <th>Hình ảnh</th>
                                 <th>Ngày giờ</th>
                                 <th>Chẩn đoán chính</th>
@@ -426,7 +443,7 @@
                     <select id="chatModelSelect" style="border: 1px solid var(--border-light); border-radius: 12px; padding: 8px 16px; font-size: 0.85rem; font-weight: 600; background: #f8fafc; outline: none; cursor: pointer;">
                         <option value="minimaxai/minimax-m2.7">Skinderm o1</option>
                         <option value="z-ai/glm5">Skinderm Pro</option>
-                        <option value="google/gemma-4-31b-it">Skinderm Turbo</option>
+                        <option value="meta/llama-3.3-70b-instruct" selected>Skinderm Turbo</option>
                     </select>
                 </div>
             </div>
@@ -519,7 +536,27 @@
         </div>
     </div>
 
+    <!-- SCAN DETAIL MODAL -->
+    <div id="scanDetailModal" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); z-index: 3000; display: flex; align-items: center; justify-content: center;">
+        <div class="modal-content card-glass fade-in" style="width: 95%; max-width: 600px; background: white; padding: 2.5rem; max-height: 90vh; overflow-y: auto; position: relative; border-radius: 20px;">
+            <button id="btnCloseModal" style="position: absolute; top: 1.5rem; right: 1.5rem; background: transparent; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%;"><i class="fa-solid fa-xmark"></i></button>
+            <div id="modalBody" style="margin-top: 1rem;">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- BLOG DETAIL MODAL -->
+    <div id="blogDetailModal" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); z-index: 3000; display: flex; align-items: center; justify-content: center;">
+        <div class="modal-content card-glass fade-in" style="width: 95%; max-width: 650px; background: white; padding: 2.5rem; max-height: 90vh; overflow-y: auto; position: relative; border-radius: 20px;">
+            <button id="btnCloseBlogModal" style="position: absolute; top: 1.5rem; right: 1.5rem; background: transparent; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%;"><i class="fa-solid fa-xmark"></i></button>
+            <div id="blogModalBody" style="margin-top: 1rem;">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN APP JS -->
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/app.js?v=2.0.1"></script>
 </body>
 </html>

@@ -105,6 +105,13 @@ def init_local_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        
+        # Check if heatmap_url column exists in analysis_records
+        cursor.execute("PRAGMA table_info(analysis_records)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if 'heatmap_url' not in columns:
+            cursor.execute("ALTER TABLE analysis_records ADD COLUMN heatmap_url TEXT")
+
         # Bảng quản lý nốt ruồi
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS moles (
@@ -443,7 +450,7 @@ def process_image(image_bytes: bytes):
         if probs_list_a:
             avg_probs_a = torch.stack(probs_list_a).mean(dim=0)  # [9]
         else:
-            avg_probs_a = None
+            avg_probs_a =None
             
         if probs_list_b:
             avg_probs_b = torch.stack(probs_list_b).mean(dim=0)  # [9]
@@ -472,8 +479,19 @@ def process_image(image_bytes: bytes):
             label_name = LABELS[idx] if idx < len(LABELS) else "Unknown"
             score = round(float(top3_prob[i].item()) * 100, 2)
             top3.append({"label": label_name, "score": score})
-        
-    return int(predicted.item()), float(confidence.item()), bbox, top3, abcde_results
+            
+    # --- Generate Heatmap Overlay using mit_b5_unet segmentation ---
+    try:
+        mask_255 = (mask_full * 255).astype(np.uint8)
+        heatmap = cv2.applyColorMap(mask_255, cv2.COLORMAP_JET)
+        heatmap_rgb = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
+        overlay = cv2.addWeighted(ori_img_np, 0.65, heatmap_rgb, 0.35, 0)
+        overlay_pil = Image.fromarray(overlay)
+    except Exception as e:
+        print(f"[WARN] Failed to generate heatmap overlay: {e}")
+        overlay_pil = original_image
+
+    return int(predicted.item()), float(confidence.item()), bbox, top3, abcde_results, overlay_pil
 
 
 def get_current_user(authorization: str = Form(None)):
@@ -545,6 +563,12 @@ class AnalyzeResponse(BaseModel):
     abcde: dict
     bbox: dict
     top3: list
+    image_url: str = None
+    heatmap_url: str = None
+    medical_advice: str = None
+    uv_index: float = None
+    temperature: float = None
+    location: str = None
 
 @app.post("/api/analyze", response_model=AnalyzeResponse)
 async def analyze_image(
@@ -560,7 +584,7 @@ async def analyze_image(
     result = process_image(contents)
     
     if result:
-        class_idx, confidence, bbox, top3, abcde_scores = result
+        class_idx, confidence, bbox, top3, abcde_scores, overlay_pil = result
         classification = LABELS[class_idx] if class_idx < len(LABELS) else "Unknown"
         
         if "MEL" in classification or "BCC" in classification or "SCC" in classification:
@@ -580,36 +604,51 @@ async def analyze_image(
         # Fallback if processing failed
         return {"status": "error", "message": "Model processing failed"}, 500
 
+    # --- Save Image and Heatmap Overlay Locally ---
+    try:
+        # Create a clean unique filename
+        ext = os.path.splitext(file.filename)[1]
+        if not ext: ext = ".jpg"
+        unique_id = uuid.uuid4().hex[:8]
+        timestamp = int(time.time())
+        
+        local_filename = f"{timestamp}_{unique_id}{ext}"
+        heatmap_filename = f"heatmap_{timestamp}_{unique_id}{ext}"
+        
+        file_save_path = os.path.join(STORAGE_PATH, local_filename)
+        heatmap_save_path = os.path.join(STORAGE_PATH, heatmap_filename)
+        
+        # Save original image
+        with open(file_save_path, "wb") as f:
+            f.write(contents)
+            
+        # Save heatmap overlay image
+        overlay_pil.save(heatmap_save_path)
+        
+        # URLs for frontend
+        image_url = f"http://localhost:8080/storage/{local_filename}"
+        heatmap_url = f"http://localhost:8080/storage/{heatmap_filename}"
+    except Exception as e:
+        print(f"[ERROR] Failed to save images locally: {e}")
+        image_url = ""
+        heatmap_url = ""
 
-    # --- Save to LOCAL (SQLite + Local Storage) if User is Auth ---
+    # --- Save to SQLite if User is Auth ---
     user = get_current_user(authorization)
-    if user:
+    if user and image_url:
         try:
             user_id = user['uid']
-            # Tạo tên file duy nhất
-            ext = os.path.splitext(file.filename)[1]
-            local_filename = f"{int(time.time())}_{uuid.uuid4().hex[:8]}{ext}"
-            file_save_path = os.path.join(STORAGE_PATH, local_filename)
-            
-            # Lưu file ảnh xuống ổ D:/
-            with open(file_save_path, "wb") as f:
-                f.write(contents)
-            
-            # URL để frontend truy cập (thay thế link Supabase)
-            # Giả sử server chạy ở port 8080
-            image_url = f"http://localhost:8080/storage/{local_filename}"
-
-            # Lưu vào SQLite
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             cursor.execute('''
                 INSERT INTO analysis_records 
-                (id, user_id, image_url, risk_score, classification, confidence, abcde, top3, uv_index, temperature, location)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (id, user_id, image_url, heatmap_url, risk_score, classification, confidence, abcde, top3, uv_index, temperature, location)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 str(uuid.uuid4()),
                 user_id,
                 image_url,
+                heatmap_url,
                 base_risk,
                 classification,
                 round(confidence * 100 if result else confidence, 2),
@@ -621,9 +660,9 @@ async def analyze_image(
             ))
             conn.commit()
             conn.close()
-            print(f"[OK] Scan saved LOCALLY (D:/.db & D:/skinderm_storage)")
+            print(f"[OK] Scan saved LOCALLY with heatmap URL: {heatmap_url}")
         except Exception as e:
-            print(f"[ERROR] Failed to save locally: {e}")
+            print(f"[ERROR] Failed to save to SQLite database: {e}")
     
     # --- Generate Medical Advice using AI ---
     advice_prompt = (
@@ -636,7 +675,7 @@ async def analyze_image(
     medical_advice = "Hệ thống đang chuẩn bị lời khuyên..."
     try:
         advice_res = nv_client.chat.completions.create(
-            model="meta/llama-3.1-8b-instruct",
+            model="meta/llama-3.3-70b-instruct",
             messages=[{"role": "user", "content": advice_prompt}],
             max_tokens=256,
             temperature=0.3,
@@ -675,7 +714,12 @@ async def analyze_image(
             }
         },
         "bbox": bbox,
-        "top3": top3
+        "top3": top3,
+        "image_url": image_url,
+        "heatmap_url": heatmap_url,
+        "uv_index": uv_index,
+        "temperature": temperature,
+        "location": location
     }
 
 
@@ -704,18 +748,140 @@ async def upload_avatar(file: UploadFile = File(...), authorization: str = Form(
         return {"status": "error", "message": str(e)}, 500
 
 
+class CompareRequest(BaseModel):
+    scan1: dict
+    scan2: dict
+    language: str = "vi"
+
+@app.post("/api/compare")
+async def compare_scans(req: CompareRequest):
+    s1 = req.scan1
+    s2 = req.scan2
+    
+    # Extract values safely
+    classification1 = s1.get("classification", s1.get("diagnosis", "Chưa rõ"))
+    classification2 = s2.get("classification", s2.get("diagnosis", "Chưa rõ"))
+    
+    confidence1 = s1.get("confidence", 0)
+    confidence2 = s2.get("confidence", 0)
+    
+    risk1 = s1.get("risk_score", s1.get("risk", 0))
+    risk2 = s2.get("risk_score", s2.get("risk", 0))
+    
+    date1 = s1.get("created_at", s1.get("date", "Lần quét 1"))
+    date2 = s2.get("created_at", s2.get("date", "Lần quét 2"))
+    
+    abcde1 = s1.get("abcde") or {}
+    abcde2 = s2.get("abcde") or {}
+    
+    # Safe ABCDE extraction
+    def get_abcde_summary(abcde):
+        if not abcde:
+            return "Không có dữ liệu chi tiết."
+        
+        # Check if shape is { A_asymmetry: { score: X, status: Y } } or raw { A_score: X }
+        if "A_asymmetry" in abcde:
+            a = f"{abcde.get('A_asymmetry', {}).get('score', 0)}% ({abcde.get('A_asymmetry', {}).get('status', 'N/A')})"
+            b = f"{abcde.get('B_border', {}).get('score', 0)}% ({abcde.get('B_border', {}).get('status', 'N/A')})"
+            c = f"{abcde.get('C_color', {}).get('score', 0)}% ({abcde.get('C_color', {}).get('status', 'N/A')})"
+            d = f"{abcde.get('D_diameter', {}).get('value', 0.0)}mm (Điểm: {abcde.get('D_diameter', {}).get('score', 0)}%)"
+            e = f"{abcde.get('E_evolution', {}).get('score', 0)}% ({abcde.get('E_evolution', {}).get('status', 'N/A')})"
+        else:
+            a = f"{abcde.get('A_score', 0)}%"
+            b = f"{abcde.get('B_score', 0)}%"
+            c = f"{abcde.get('C_color', 0)}%" if "C_color" in abcde else f"{abcde.get('C_score', 0)}%"
+            d = f"{abcde.get('D_diameter', 0)}%" if "D_diameter" in abcde else f"{abcde.get('D_score', 0)}%"
+            e = f"{abcde.get('E_score', 0)}%"
+        return f"A_Asymmetry: {a}, B_Border: {b}, C_Color: {c}, D_Diameter: {d}, E_Evolution: {e}"
+
+    summary1 = get_abcde_summary(abcde1)
+    summary2 = get_abcde_summary(abcde2)
+    
+    uv1 = s1.get("uv_index", "N/A")
+    uv2 = s2.get("uv_index", "N/A")
+    
+    temp1 = s1.get("temperature", "N/A")
+    temp2 = s2.get("temperature", "N/A")
+    
+    loc1 = s1.get("location", "N/A")
+    loc2 = s2.get("location", "N/A")
+    
+    prompt = (
+        "Bạn là Skinderm AI, một chuyên gia AI da liễu hàng đầu được tích hợp trong hệ thống chẩn đoán. "
+        "Nhiệm vụ của bạn là phân tích so sánh tiến triển của hai lượt quét da (scan) khác nhau của bệnh nhân để giúp bác sĩ lâm sàng và bệnh nhân hiểu rõ tình trạng thay đổi.\n\n"
+        "=== THÔNG TIN LƯỢT QUÉT 1 (CŨ HƠN) ===\n"
+        f"- Ngày quét: {date1}\n"
+        f"- Chẩn đoán chính: {classification1} (Độ tin cậy: {confidence1}%)\n"
+        f"- Mức độ rủi ro tổng hợp: {risk1}%\n"
+        f"- Chỉ số chi tiết ABCDE: {summary1}\n"
+        f"- Môi trường thời tiết: Vị trí {loc1}, Chỉ số UV {uv1}, Nhiệt độ {temp1}°C\n\n"
+        
+        "=== THÔNG TIN LƯỢT QUÉT 2 (MỚI HƠN) ===\n"
+        f"- Ngày quét: {date2}\n"
+        f"- Chẩn đoán chính: {classification2} (Độ tin cậy: {confidence2}%)\n"
+        f"- Mức độ rủi ro tổng hợp: {risk2}%\n"
+        f"- Chỉ số chi tiết ABCDE: {summary2}\n"
+        f"- Môi trường thời tiết: Vị trí {loc2}, Chỉ số UV {uv2}, Nhiệt độ {temp2}°C\n\n"
+        
+        "Nhiệm vụ của bạn: Hãy phân tích tiến triển và viết một Báo cáo So sánh Tiến triển Y khoa cực kỳ chi tiết, khoa học bằng tiếng Việt. Hãy định dạng báo cáo thật đẹp bằng Markdown:\n"
+        "1. Sử dụng các tiêu đề rõ ràng (### 1. Phân tích Xu hướng Rủi ro, ### 2. Đánh giá Biến động Chỉ số ABCDE, ### 3. Đánh giá Môi trường & Lối sống, ### 4. Khuyến nghị Y khoa chuyên sâu).\n"
+        "2. Sử dụng bảng Markdown (Markdown Table) để hiển thị so sánh đối chiếu giữa Lần 1 và Lần 2 (so sánh: Chẩn đoán, Rủi ro, Kích thước D, Chỉ số Asymmetry, UV Index).\n"
+        "3. Dùng khối trích dẫn (Blockquote) màu đỏ nhạt để đưa ra các lời khuyên an toàn y tế khẩn cấp nếu phát hiện rủi ro tăng lên hoặc kích thước nốt ruồi to ra.\n"
+        "4. Nhấn mạnh (Bôi đậm) các biến động đáng chú ý.\n\n"
+        "Các ranh giới đỏ cấm kỵ (Hard Guardrails):\n"
+        "- KHÔNG BAO GIỜ khẳng định bệnh nhân bị ung thư da hay tự ý chẩn đoán xác định.\n"
+        "- Tuyệt đối không kê đơn thuốc hoặc chỉ định can thiệp phẫu thuật trực tiếp.\n\n"
+        "Hãy luôn chèn câu miễn trừ trách nhiệm y tế chuẩn mực ở cuối báo cáo: 'Lưu ý: Báo cáo so sánh này được thực hiện tự động bởi Skinderm AI và chỉ mang tính chất sàng lọc tham khảo, không thay thế chẩn đoán lâm sàng của bác sĩ chuyên khoa da liễu.'"
+    )
+    
+    try:
+        completion = nv_client.chat.completions.create(
+            model="meta/llama-3.3-70b-instruct",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=2048,
+            temperature=0.3
+        )
+        report = completion.choices[0].message.content.strip()
+        return {"status": "success", "report": report}
+    except Exception as e:
+        print(f"[ERROR] LLM Compare error: {e}")
+        diff_risk = risk2 - risk1
+        risk_dir = "tăng lên" if diff_risk > 0 else ("giảm xuống" if diff_risk < 0 else "ổn định")
+        fallback_report = (
+            f"### Báo cáo So sánh Tự động (Hệ thống dự phòng)\n\n"
+            f"- **Xu hướng Rủi ro**: Mức độ rủi ro đã biến động {risk_dir} từ **{risk1}%** ở lần quét thứ nhất sang **{risk2}%** ở lần quét thứ hai (lệch {abs(diff_risk)}%).\n"
+            f"- **Chẩn đoán**: Từ **{classification1}** sang **{classification2}**.\n\n"
+            f"> **KHUYẾN NGHỊ:** Lịch sử ghi nhận tiến triển có biến động. Xin vui lòng đặt lịch khám sớm với bác sĩ chuyên khoa da liễu tại cơ sở y tế gần nhất để đối chiếu lâm sàng cụ thể."
+        )
+        return {"status": "success", "report": fallback_report}
+
+
 class ChatRequest(BaseModel):
     message: str
     language: str = "vi"
-    model: str = "moonshotai/kimi-k2.5"
+    model: str = "meta/llama-3.3-70b-instruct"
     context: str = ""
 
 @app.post("/api/chat")
 async def chat_interaction(chat_req: ChatRequest, request: Request):
     system_prompt = (
-        "Bạn là Bác sĩ Trưởng khoa Chuyên ngành Da liễu (DermAI Vision). "
-        "Hãy trả lời bằng tiếng Việt, phong cách chuyên nghiệp, tận tâm. "
-        "Dựa trên dữ liệu chẩn đoán sau: " + chat_req.context
+        "Bạn là Skinderm AI, một trợ lý trí tuệ nhân tạo chuyên cung cấp thông tin hỗ trợ về các vấn đề da liễu. "
+        "Bạn KHÔNG PHẢI là bác sĩ y khoa, không có chứng chỉ hành nghề, và bạn phải luôn tự nhận thức rõ vai trò là một máy móc hỗ trợ, tuyệt đối không được nhận mình là bác sĩ con người.\n"
+        "Hãy trả lời bằng tiếng Việt, với phong cách chuyên nghiệp, thân thiện, tận tâm, gần gũi và ấm áp, tránh sự khô khan hay cứng ngắc.\n\n"
+        "Dựa trên dữ liệu chẩn đoán sau: " + chat_req.context + "\n\n"
+        "Nhiệm vụ của bạn là giải thích kết quả phân loại hình ảnh tổn thương da, cung cấp các thông tin y khoa cơ bản, nguyên nhân, và cách chăm sóc da thông thường liên quan đến 9 loại bệnh da liễu trong hệ thống. Tuyệt đối không trả lời các câu hỏi ngoài lề không liên quan đến da liễu.\n\n"
+        "Hãy cấu trúc câu trả lời của bạn thật chuyên nghiệp và khoa học bằng cách sử dụng Markdown:\n"
+        "- Sử dụng các tiêu đề mục rõ ràng (như ### 1. Phân tích Chẩn đoán & Độ rủi ro, ### 2. Đánh giá Chỉ số ABCDE & Thời tiết, ### 3. Khuyến nghị Chăm sóc & Theo dõi).\n"
+        "- Trình bày các dữ liệu so sánh hoặc chỉ số bằng bảng biểu (Markdown Table) để trực quan và dễ hiểu.\n"
+        "- Dùng danh sách có dấu đầu dòng (Bullet points) ngắn gọn, súc tích.\n"
+        "- Bôi đậm (Strong) các từ khóa y khoa quan trọng để nhấn mạnh.\n"
+        "- Đặt các cảnh báo quan trọng hoặc lời khuyên khẩn cấp trong khối trích dẫn (Blockquote) để tạo sự chú ý đặc biệt.\n\n"
+        "Các ranh giới đỏ cấm kỵ (Hard Guardrails):\n"
+        "- TUYỆT ĐỐI KHÔNG TRẢ LỜI CÂU HỎI NGOÀI LỀ: Nếu người dùng hỏi bất kỳ câu hỏi nào KHÔNG liên quan trực tiếp đến da liễu, bệnh lý da, cách chăm sóc da, hoặc kết quả scan da (ví dụ: các thắc mắc về lập trình phần mềm, toán học, lịch sử, ẩm thực, làm thơ, hoặc các chuyên khoa y khoa hoàn toàn khác như tim mạch, cơ xương khớp, nha khoa...), bạn BẮT BUỘC phải từ chối trả lời một cách lịch sự, nhã nhặn. Hãy nêu rõ rằng bạn là AI chuyên biệt về Da liễu của Skinderm và chỉ có thể tư vấn các vấn đề trong phạm vi này.\n"
+        "- KHÔNG BAO GIỜ được phép chẩn đoán khẳng định bệnh nhân mắc bệnh gì.\n"
+        "- TUYỆT ĐỐI CẤM kê đơn thuốc, gợi ý liều lượng thuốc, hay chỉ định các biện pháp can thiệp y khoa (phẫu thuật, xạ trị,...).\n"
+        "- Nếu người dùng yêu cầu kê đơn thuốc, hãy từ chối ngay lập tức một cách lịch sự, nhẹ nhàng và giải thích rõ giới hạn của mình.\n\n"
+        "Luôn chèn câu này vào cuối các tư vấn về bệnh lý: 'Lưu ý: Skinderm AI chỉ mang tính chất hỗ trợ tầm soát. Vui lòng đến bệnh viện hoặc phòng khám da liễu để được bác sĩ chuyên khoa thăm khám và điều trị chính xác nhất.'"
     )
 
     async def generate_events():

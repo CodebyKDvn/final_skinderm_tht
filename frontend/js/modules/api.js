@@ -90,6 +90,24 @@ const API = {
             })
         });
     },
+
+    /**
+     * Compare two scans using AI
+     */
+    async compareScans(scan1, scan2) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/compare`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scan1, scan2 })
+            });
+            if (!response.ok) throw new Error("Failed to compare scans");
+            return await response.json();
+        } catch (err) {
+            console.error("Compare API Error:", err);
+            return { status: 'error', message: err.message };
+        }
+    },
     
     /**
      * Upload user avatar

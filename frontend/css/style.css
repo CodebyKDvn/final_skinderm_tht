@@ -2093,3 +2093,264 @@ a {
     font-size: 1.05rem;
     margin: 0;
 }
+
+/* =========================================
+   MOBILE RESPONSIVE OVERRIDES
+   ========================================= */
+
+/* Hamburger Menu Button */
+.hamburger-menu {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 26px;
+    height: 18px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1200;
+}
+
+.hamburger-menu span {
+    width: 100%;
+    height: 2px;
+    background-color: var(--text-primary);
+    border-radius: 2px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hamburger-menu.active span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+
+.hamburger-menu.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-menu.active span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
+
+/* Mobile Menu Drawer Overlay */
+.mobile-menu-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(253, 251, 247, 0.98);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+}
+
+.mobile-menu-drawer.active {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mobile-menu-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3rem;
+    width: 100%;
+    padding: 2rem;
+}
+
+.mobile-menu-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+}
+
+.mobile-menu-links a {
+    font-family: var(--font-sans);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition: var(--transition-smooth);
+}
+
+.mobile-menu-links a:hover {
+    color: var(--medical-blue-base);
+}
+
+.mobile-menu-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+    width: 100%;
+    max-width: 280px;
+}
+
+.mobile-menu-actions .btn {
+    width: 100%;
+    justify-content: center;
+}
+
+/* No Scroll Body Style */
+body.no-scroll {
+    overflow: hidden;
+}
+
+/* General Responsive Styles */
+@media (max-width: 1024px) {
+    .nav-container {
+        padding: 1rem 5%;
+    }
+    
+    .split-layout {
+        gap: 3rem;
+    }
+    
+    .highlights-visual {
+        display: flex;
+        justify-content: center;
+    }
+    
+    .floating-visual {
+        max-width: 80%;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Navbar Hamburger Trigger */
+    .hamburger-menu {
+        display: flex;
+    }
+    
+    .nav-center, .nav-right .btn-text, .nav-right .btn-dark {
+        display: none;
+    }
+    
+    .nav-right {
+        justify-content: flex-end;
+        flex: 1;
+    }
+    
+    /* Announcement Bar text wrapping */
+    .announcement-bar {
+        font-size: 0.75rem;
+        padding: 0 1rem;
+        text-align: center;
+    }
+    
+    /* Hero Title clamping & spacing */
+    .hero-title {
+        font-size: clamp(2.5rem, 10vw, 4.5rem);
+        letter-spacing: -1.5px;
+    }
+    
+    .hero-desc {
+        font-size: 1.05rem;
+        margin-bottom: 2rem;
+    }
+    
+    /* Products Section and Platform connection lines */
+    .products-section {
+        padding: 6rem 1rem;
+    }
+    
+    .product-cards-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .product-card {
+        height: auto;
+        padding-bottom: 2rem !important;
+    }
+    
+    .product-card .card-visual img {
+        width: 100%;
+        transform: none;
+    }
+    
+    .connection-lines {
+        display: none; /* Hide confusing line paths on mobile */
+    }
+    
+    .chips-container {
+        gap: 0.6rem;
+    }
+    
+    .chip {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.8rem;
+    }
+    
+    /* Highlights Section */
+    .highlights-section {
+        padding: 6rem 1rem;
+    }
+    
+    .highlights-layout {
+        flex-direction: column-reverse;
+        gap: 3rem;
+    }
+    
+    #flower-container {
+        display: none !important; /* Hide 3D flower to keep readability clean and avoid viewport breaking */
+    }
+    
+    /* Mindmap Section */
+    .how-it-works-section {
+        padding: 6rem 1rem;
+    }
+    
+    .tree-wrapper {
+        justify-content: flex-start;
+        padding: 1rem;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .tree-node {
+        padding: 0.8rem 1.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .tree-node.center-node {
+        padding: 1.1rem 2rem;
+        font-size: 0.95rem;
+    }
+    
+    /* CTA section */
+    .cta-section {
+        padding: 6rem 1rem 8rem 1rem;
+    }
+    
+    .cta-title {
+        font-size: 2.5rem;
+    }
+    
+    .cta-desc {
+        font-size: 1.05rem;
+        margin-bottom: 2rem;
+    }
+    
+    .cta-actions {
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 280px;
+        margin: 0 auto;
+        gap: 1rem;
+    }
+    
+    .cta-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

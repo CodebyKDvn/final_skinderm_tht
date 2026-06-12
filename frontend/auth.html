@@ -239,11 +239,81 @@
             color: #2563eb;
         }
         
-        .error-text {
-            color: #ef4444;
-            font-size: 12px;
-            margin-top: 5px;
+        .mobile-toggle-text {
             display: none;
+            font-size: 13px;
+            color: #666;
+            margin-top: 15px;
+        }
+
+        .mobile-toggle-text a {
+            color: #2563eb !important;
+            font-weight: 600;
+            margin: 0 !important;
+            display: inline-block;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1.5rem;
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto;
+                justify-content: center;
+            }
+
+            .container {
+                width: 100%;
+                max-width: 420px;
+                min-height: 520px;
+                border-radius: 20px;
+            }
+
+            .toggle-container {
+                display: none;
+            }
+
+            .form-container {
+                width: 100%;
+                height: 100%;
+                position: absolute;
+                top: 0;
+                left: 0;
+                transition: transform 0.4s ease, opacity 0.4s ease;
+            }
+
+            .sign-in {
+                opacity: 1;
+                pointer-events: auto;
+                transform: none;
+                z-index: 5;
+            }
+
+            .container.active .sign-in {
+                opacity: 0;
+                pointer-events: none;
+                transform: scale(0.95);
+                z-index: 1;
+            }
+
+            .sign-up {
+                opacity: 0;
+                pointer-events: none;
+                transform: scale(0.95);
+                z-index: 1;
+            }
+
+            .container.active .sign-up {
+                opacity: 1;
+                pointer-events: auto;
+                transform: none;
+                z-index: 5;
+                animation: none;
+            }
+
+            .mobile-toggle-text {
+                display: block;
+            }
         }
     </style>
 </head>
@@ -260,6 +330,7 @@
                 <p class="error-text" id="signupError"></p>
                 <button type="submit">Đăng ký</button>
                 <div id="signupSpinner"><i class="fa-solid fa-spinner fa-spin" style="display:none; color: #2563eb; margin-top: 10px;"></i></div>
+                <p class="mobile-toggle-text">Đã có tài khoản? <a href="#" id="mobileGoToLogin">Đăng nhập</a></p>
             </form>
         </div>
 
@@ -273,6 +344,7 @@
                 <p class="error-text" id="loginError"></p>
                 <button type="submit">Đăng nhập</button>
                 <div id="loginSpinner"><i class="fa-solid fa-spinner fa-spin" style="display:none; color: #2563eb; margin-top: 10px;"></i></div>
+                <p class="mobile-toggle-text">Chưa có tài khoản? <a href="#" id="mobileGoToRegister">Đăng ký ngay</a></p>
             </form>
         </div>
 
@@ -318,6 +390,26 @@
             container.classList.remove("active");
             document.getElementById('signupError').style.display = 'none';
         });
+
+        // Mobile Toggle UI Logic
+        const mobileGoToRegister = document.getElementById('mobileGoToRegister');
+        const mobileGoToLogin = document.getElementById('mobileGoToLogin');
+
+        if (mobileGoToRegister) {
+            mobileGoToRegister.addEventListener('click', (e) => {
+                e.preventDefault();
+                container.classList.add("active");
+                document.getElementById('loginError').style.display = 'none';
+            });
+        }
+
+        if (mobileGoToLogin) {
+            mobileGoToLogin.addEventListener('click', (e) => {
+                e.preventDefault();
+                container.classList.remove("active");
+                document.getElementById('signupError').style.display = 'none';
+            });
+        }
 
         // Login Logic
         const loginForm = document.getElementById('loginForm');

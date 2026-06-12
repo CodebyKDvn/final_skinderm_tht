@@ -21,6 +21,9 @@
     <nav class="navbar has-mega-menu">
         <div class="nav-container">
             <div class="nav-left">
+                <button class="docs-sidebar-toggle" id="docsSidebarToggleBtn" aria-label="Toggle Sidebar">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
                 <a href="index.html" class="logo">
                     <i class="fa-solid fa-microscope" style="margin-right: 8px;"></i>
                     Skinderm AI
@@ -336,8 +339,33 @@
     </div>
 
     <script>
+        // Sidebar drawer toggle logic for mobile
+        const sidebarToggle = document.getElementById('docsSidebarToggleBtn');
+        const docsSidebar = document.querySelector('.docs-sidebar');
+        
         // Simple script to handle active states in sidebar
         const links = document.querySelectorAll('.sidebar-group a');
+
+        if (sidebarToggle && docsSidebar) {
+            sidebarToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                docsSidebar.classList.toggle('active');
+            });
+            
+            // Close when clicking any link in sidebar
+            links.forEach(link => {
+                link.addEventListener('click', () => {
+                    docsSidebar.classList.remove('active');
+                });
+            });
+
+            // Close when clicking outside the sidebar
+            document.addEventListener('click', (e) => {
+                if (!docsSidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                    docsSidebar.classList.remove('active');
+                }
+            });
+        }
         links.forEach(link => {
             link.addEventListener('click', function() {
                 links.forEach(l => l.classList.remove('active'));

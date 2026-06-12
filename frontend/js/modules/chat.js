@@ -89,7 +89,40 @@ const CHAT = {
 
         try {
             updateStatus("Đang đọc dữ liệu chẩn đoán của bạn...");
-            const context = state.history.length ? `Lịch sử chẩn đoán: ${JSON.stringify(state.history[0].details)}` : "Chưa có dữ liệu scan.";
+            
+            let context = "Chưa có dữ liệu scan.";
+            if (state.history.length > 0) {
+                const latest = state.history[0];
+                const details = latest.details || {};
+                
+                // Get weather fields safely from details or current weather state
+                const uv = details.uv_index !== undefined && details.uv_index !== null ? details.uv_index : (state.currentWeather?.uvIndex || "Chưa có dữ liệu");
+                const temp = details.temperature !== undefined && details.temperature !== null ? details.temperature : (state.currentWeather?.temp || "Chưa có dữ liệu");
+                const loc = details.location || (state.currentWeather?.location || "Chưa có dữ liệu");
+                
+                // Format top 3 predictions
+                const top3Str = details.top3 ? details.top3.map(p => `- ${p.label}: ${p.score}%`).join("\n") : "- Không có dữ liệu top 3";
+                
+                context = `
+=== THÔNG TIN BỆNH NHÂN & LỊCH SỬ CHẨN ĐOÁN CHI TIẾT ===
+- Chẩn đoán chính: ${latest.diagnosis || "Chưa xác định"} (Độ tin cậy: ${details.confidence || 0}%)
+- Mức độ rủi ro tổng hợp: ${latest.risk || 0}%
+- Top 3 nguy cơ hàng đầu:
+${top3Str}
+- Phân tích chuẩn ABCDE:
+  + A (Asymmetry - Bất đối xứng): ${details.abcde?.A_asymmetry?.score || 0}% - Trạng thái: ${details.abcde?.A_asymmetry?.status || "Bình thường"}
+  + B (Border - Đường viền): ${details.abcde?.B_border?.score || 0}% - Trạng thái: ${details.abcde?.B_border?.status || "Bình thường"}
+  + C (Color - Màu sắc): ${details.abcde?.C_color?.score || 0}% - Trạng thái: ${details.abcde?.C_color?.status || "Đều màu"}
+  + D (Diameter - Đường kính): ${details.abcde?.D_diameter?.score || 0}% - Chiều dài: ${details.abcde?.D_diameter?.value || 3.0}mm
+  + E (Evolution - Tiến triển): ${details.abcde?.E_evolution?.score || 0}% - Trạng thái: ${details.abcde?.E_evolution?.status || "Cần lịch sử"}
+- Tình trạng thời tiết & môi trường xung quanh:
+  + Chỉ số tia cực tím (UV Index): ${uv}
+  + Nhiệt độ môi trường: ${temp}°C
+  + Vị trí địa lý: ${loc}
+- Lời khuyên ban đầu từ mô hình AI: "${details.medical_advice || "Không có"}"
+======================================================
+`;
+            }
             
             updateStatus("Đang phân tích yêu cầu...");
             const response = await API.startChatStream(text, chatModelSelect.value, context, state.abortController.signal);
