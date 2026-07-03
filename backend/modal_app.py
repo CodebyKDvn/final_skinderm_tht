@@ -1,5 +1,6 @@
 import modal
 import os
+import sys
 
 # Create the Modal App
 app = modal.App("skinderm-backend")
@@ -57,6 +58,17 @@ volume = modal.Volume.from_name("skinderm-storage", create_if_missing=True)
 def fastapi_app():
     # Set STORAGE_ROOT to point to the persistent volume mount path
     os.environ["STORAGE_ROOT"] = "/data"
+    
+    # Ensure backend directory is in sys.path and working directory
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    if backend_dir not in sys.path:
+        sys.path.insert(0, backend_dir)
+    sys.path.insert(0, "/root/backend")
+    
+    if os.path.exists("/root/backend"):
+        os.chdir("/root/backend")
+    elif os.path.exists(backend_dir):
+        os.chdir(backend_dir)
     
     # Import the FastAPI app inside the function context
     from main import app as web_app
