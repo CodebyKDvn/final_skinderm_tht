@@ -55,28 +55,46 @@ IMAGEKIT_PUBLIC_KEY = os.getenv("IMAGEKIT_PUBLIC_KEY", "public_eilUB6xKm53YlRbH/
 IMAGEKIT_PRIVATE_KEY = os.getenv("IMAGEKIT_PRIVATE_KEY", "private_SUBNq7mziNujilOpU2IykJNiXSo=")
 IMAGEKIT_URL_ENDPOINT = os.getenv("IMAGEKIT_URL_ENDPOINT", "https://ik.imagekit.io/codebykdvn")
 
-imagekit = ImageKit(
-    private_key=IMAGEKIT_PRIVATE_KEY,
-    public_key=IMAGEKIT_PUBLIC_KEY,
-    url_endpoint=IMAGEKIT_URL_ENDPOINT
-)
+# Khởi tạo ImageKit client (SDK v5 nhận private_key)
+try:
+    imagekit = ImageKit(private_key=IMAGEKIT_PRIVATE_KEY)
+except Exception:
+    imagekit = None
 
 def upload_to_imagekit(file_bytes: bytes, file_name: str, folder: str = "/scans") -> str:
     """Upload tệp byte lên ImageKit Cloud và trả về CDN URL công khai."""
+    if not imagekit:
+        return ""
     try:
-        res = imagekit.upload_file(
-            file=file_bytes,
-            file_name=file_name,
-            options={"folder": folder}
-        )
-        url = getattr(res, "url", None)
-        if not url and isinstance(res, dict):
-            url = res.get("url")
-        if not url and hasattr(res, "response_metadata"):
-            raw = getattr(res.response_metadata, "raw", {})
-            if isinstance(raw, dict):
-                url = raw.get("url")
-        return url or ""
+        if hasattr(imagekit, "files") and hasattr(imagekit.files, "upload"):
+            res = imagekit.files.upload(
+                file=file_bytes,
+                file_name=file_name,
+                folder=folder
+            )
+        elif hasattr(imagekit, "upload_file"):
+            res = imagekit.upload_file(
+                file=file_bytes,
+                file_name=file_name,
+                options={"folder": folder}
+            )
+        else:
+            res = None
+
+        if res:
+            url = getattr(res, "url", None)
+            if not url and isinstance(res, dict):
+                url = res.get("url")
+            if not url and hasattr(res, "response_metadata"):
+                raw = getattr(res.response_metadata, "raw", {})
+                if isinstance(raw, dict):
+                    url = raw.get("url")
+            if url:
+                if not url.startswith("http"):
+                    endpoint = IMAGEKIT_URL_ENDPOINT.rstrip("/")
+                    url = f"{endpoint}/{url.lstrip('/')}"
+                return url
+        return ""
     except Exception as e:
         print(f"[ERROR] ImageKit upload error: {e}")
         return ""
