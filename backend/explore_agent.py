@@ -5,10 +5,10 @@ from langgraph.graph import StateGraph, END
 from openai import OpenAI
 
 # We use the existing NVIDIA client configuration to stay consistent.
-NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "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")
 nv_client = OpenAI(
   base_url = "https://integrate.api.nvidia.com/v1",
-  api_key = NVIDIA_API_KEY,
+  api_key = NVIDIA_API_KEY if NVIDIA_API_KEY else "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",
   timeout = 90.0, # Increased for complex LangGraph chains
   max_retries = 1
 )

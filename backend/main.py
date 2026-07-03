@@ -33,10 +33,10 @@ load_dotenv()
 app = FastAPI(title="Skinderm AI Backend API", version="1.0.0")
 
 # --- NVIDIA AI Client ---
-NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "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")
 nv_client = OpenAI(
   base_url = "https://integrate.api.nvidia.com/v1",
-  api_key = NVIDIA_API_KEY,
+  api_key = NVIDIA_API_KEY if NVIDIA_API_KEY else "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",
   timeout = 30.0,
   max_retries = 0
 )
