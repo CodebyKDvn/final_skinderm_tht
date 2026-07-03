@@ -2,7 +2,6 @@ from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-import random
 import time
 import asyncio
 import requests
@@ -42,98 +41,41 @@ nv_client = OpenAI(
   max_retries = 0
 )
 
-# --- Local Storage & SQLite Configuration ---
-import sqlite3
+# --- ImageKit Cloud Storage & Firestore Configuration ---
 import uuid
-from fastapi.staticfiles import StaticFiles
+from datetime import datetime
+from imagekitio import ImageKit
 
-# --- Local Storage & SQLite Configuration ---
-import sqlite3
-import uuid
-from fastapi.staticfiles import StaticFiles
+IMAGEKIT_PUBLIC_KEY = os.getenv("IMAGEKIT_PUBLIC_KEY", "public_eilUB6xKm53YlRbH/rrMSl30xtg=")
+IMAGEKIT_PRIVATE_KEY = os.getenv("IMAGEKIT_PRIVATE_KEY", "private_SUBNq7mziNujilOpU2IykJNiXSo=")
+IMAGEKIT_URL_ENDPOINT = os.getenv("IMAGEKIT_URL_ENDPOINT", "https://ik.imagekit.io/codebykdvn")
 
-# Cấu hình đường dẫn lưu trữ (Ưu tiên từ .env, sau đó là ổ D, cuối cùng là thư mục hiện tại)
-STORAGE_ROOT = os.getenv("STORAGE_ROOT", "D:/")
-if not os.path.exists(STORAGE_ROOT) and STORAGE_ROOT == "D:/":
-    STORAGE_ROOT = os.getcwd()
-elif not os.path.exists(STORAGE_ROOT):
-    os.makedirs(STORAGE_ROOT, exist_ok=True)
+imagekit = ImageKit(
+    private_key=IMAGEKIT_PRIVATE_KEY,
+    public_key=IMAGEKIT_PUBLIC_KEY,
+    url_endpoint=IMAGEKIT_URL_ENDPOINT
+)
 
-DB_PATH = os.path.join(STORAGE_ROOT, "skinderm.db")
-STORAGE_PATH = os.path.join(STORAGE_ROOT, "skinderm_storage")
-
-# Đảm bảo thư mục lưu trữ ảnh tồn tại
-if not os.path.exists(STORAGE_PATH):
+def upload_to_imagekit(file_bytes: bytes, file_name: str, folder: str = "/scans") -> str:
+    """Upload tệp byte lên ImageKit Cloud và trả về CDN URL công khai."""
     try:
-        os.makedirs(STORAGE_PATH, exist_ok=True)
-        print(f"[OK] Created Storage directory: {STORAGE_PATH}")
+        res = imagekit.upload_file(
+            file=file_bytes,
+            file_name=file_name,
+            options={"folder": folder}
+        )
+        url = getattr(res, "url", None)
+        if not url and isinstance(res, dict):
+            url = res.get("url")
+        if not url and hasattr(res, "response_metadata"):
+            raw = getattr(res.response_metadata, "raw", {})
+            if isinstance(raw, dict):
+                url = raw.get("url")
+        return url or ""
     except Exception as e:
-        # Fallback cuối cùng nếu vẫn lỗi quyền ghi
-        STORAGE_ROOT = os.getcwd()
-        STORAGE_PATH = os.path.join(STORAGE_ROOT, "skinderm_storage")
-        DB_PATH = os.path.join(STORAGE_ROOT, "skinderm.db")
-        os.makedirs(STORAGE_PATH, exist_ok=True)
-        print(f"[WARN] Fallback to project directory due to error: {e}")
+        print(f"[ERROR] ImageKit upload error: {e}")
+        return ""
 
-
-def init_local_db():
-    """Khởi tạo bảng SQLite nếu chưa có."""
-    global DB_PATH
-    try:
-        conn = sqlite3.connect(DB_PATH)
-    except Exception:
-        # Nếu vẫn không mở được (ví dụ ổ D có tồn tại nhưng Read-only)
-        DB_PATH = os.path.join(os.getcwd(), "skinderm.db")
-        conn = sqlite3.connect(DB_PATH)
-        
-    try:
-        cursor = conn.cursor()
-        # Bảng lịch sử quét da
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS analysis_records (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                image_url TEXT NOT NULL,
-                risk_score REAL NOT NULL,
-                classification TEXT NOT NULL,
-                confidence REAL NOT NULL,
-                abcde TEXT, 
-                top3 TEXT,  
-                uv_index REAL,
-                temperature REAL,
-                location TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        # Check if heatmap_url column exists in analysis_records
-        cursor.execute("PRAGMA table_info(analysis_records)")
-        columns = [col[1] for col in cursor.fetchall()]
-        if 'heatmap_url' not in columns:
-            cursor.execute("ALTER TABLE analysis_records ADD COLUMN heatmap_url TEXT")
-
-        # Bảng quản lý nốt ruồi
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS moles (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                body_part TEXT,
-                notes TEXT,
-                status TEXT DEFAULT 'monitoring',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        conn.commit()
-        conn.close()
-        print(f"[OK] Local Database initialized at {DB_PATH}")
-    except Exception as e:
-        print(f"[ERROR] Could not initialize database at {DB_PATH}: {e}")
-
-init_local_db()
-
-# Mount thư mục ảnh để có thể truy cập qua URL (ví dụ: http://localhost:8080/storage/abc.jpg)
-app.mount("/storage", StaticFiles(directory=STORAGE_PATH), name="storage")
 
 # Configure CORS
 app.add_middleware(
@@ -397,7 +339,7 @@ def process_image(image_bytes: bytes):
         "B": b_score,
         "C": c_score,
         "D": d_score,
-        "E": 15.0 # Placeholder for single scan
+        "E": 0.0 # Placeholder for single scan
     }
     
     # ----------------------------------
@@ -537,23 +479,25 @@ async def get_user_history(authorization: str = Form(...)):
     
     user_id = user['uid']
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row # Để lấy dữ liệu dạng Dictionary
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM analysis_records WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
-        rows = cursor.fetchall()
+        db = firebase_auth_manager.get_db()
+        if not db:
+            return {"status": "error", "message": "Database not initialized"}, 500
+
+        docs = db.collection("analysis_records")\
+                 .where("user_id", "==", user_id)\
+                 .get()
         
-        # Chuyển đổi dữ liệu từ SQLite sang định dạng JSON mà Frontend mong đợi
         data = []
-        for row in rows:
-            item = dict(row)
-            item['abcde'] = json.loads(item['abcde']) if item['abcde'] else None
-            item['top3'] = json.loads(item['top3']) if item['top3'] else None
+        for doc in docs:
+            item = doc.to_dict()
+            item['id'] = doc.id
             data.append(item)
             
-        conn.close()
+        # Sắp xếp theo ngày tạo mới nhất lên đầu
+        data.sort(key=lambda x: str(x.get('created_at', '')), reverse=True)
         return {"status": "success", "data": data}
     except Exception as e:
+        print(f"[ERROR] Failed to fetch history from Firestore: {e}")
         return {"status": "error", "message": str(e)}, 500
 
 class AnalyzeResponse(BaseModel):
@@ -605,9 +549,8 @@ async def analyze_image(
         # Fallback if processing failed
         return {"status": "error", "message": "Model processing failed"}, 500
 
-    # --- Save Image and Heatmap Overlay Locally ---
+    # --- Save Image and Heatmap Overlay to ImageKit Cloud ---
     try:
-        # Create a clean unique filename
         ext = os.path.splitext(file.filename)[1]
         if not ext: ext = ".jpg"
         unique_id = uuid.uuid4().hex[:8]
@@ -616,55 +559,46 @@ async def analyze_image(
         local_filename = f"{timestamp}_{unique_id}{ext}"
         heatmap_filename = f"heatmap_{timestamp}_{unique_id}{ext}"
         
-        file_save_path = os.path.join(STORAGE_PATH, local_filename)
-        heatmap_save_path = os.path.join(STORAGE_PATH, heatmap_filename)
+        # Chuyển đổi overlay PIL sang bytes
+        img_byte_arr = io.BytesIO()
+        overlay_pil.save(img_byte_arr, format='JPEG')
+        overlay_bytes = img_byte_arr.getvalue()
         
-        # Save original image
-        with open(file_save_path, "wb") as f:
-            f.write(contents)
-            
-        # Save heatmap overlay image
-        overlay_pil.save(heatmap_save_path)
-        
-        # URLs for frontend
-        base_url = str(request.base_url).rstrip("/")
-        image_url = f"{base_url}/storage/{local_filename}"
-        heatmap_url = f"{base_url}/storage/{heatmap_filename}"
+        image_url = upload_to_imagekit(contents, local_filename, folder="/scans")
+        heatmap_url = upload_to_imagekit(overlay_bytes, heatmap_filename, folder="/heatmaps")
+        print(f"[OK] Uploaded to ImageKit: {image_url}")
     except Exception as e:
-        print(f"[ERROR] Failed to save images locally: {e}")
+        print(f"[ERROR] Failed to upload images to ImageKit: {e}")
         image_url = ""
         heatmap_url = ""
 
-    # --- Save to SQLite if User is Auth ---
+    # --- Save to Firestore Database if User is Auth ---
     user = get_current_user(authorization)
     if user and image_url:
         try:
             user_id = user['uid']
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO analysis_records 
-                (id, user_id, image_url, heatmap_url, risk_score, classification, confidence, abcde, top3, uv_index, temperature, location)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                str(uuid.uuid4()),
-                user_id,
-                image_url,
-                heatmap_url,
-                base_risk,
-                classification,
-                round(confidence * 100 if result else confidence, 2),
-                json.dumps(abcde_final),
-                json.dumps(top3),
-                uv_index,
-                temperature,
-                location
-            ))
-            conn.commit()
-            conn.close()
-            print(f"[OK] Scan saved LOCALLY with heatmap URL: {heatmap_url}")
+            db = firebase_auth_manager.get_db()
+            if db:
+                record_id = str(uuid.uuid4())
+                record_data = {
+                    "id": record_id,
+                    "user_id": user_id,
+                    "image_url": image_url,
+                    "heatmap_url": heatmap_url,
+                    "risk_score": base_risk,
+                    "classification": classification,
+                    "confidence": round(confidence * 100 if result else confidence, 2),
+                    "abcde": abcde_final,
+                    "top3": top3,
+                    "uv_index": uv_index,
+                    "temperature": temperature,
+                    "location": location,
+                    "created_at": datetime.utcnow().isoformat()
+                }
+                db.collection("analysis_records").document(record_id).set(record_data)
+                print(f"[OK] Scan saved to Firestore with ID: {record_id}")
         except Exception as e:
-            print(f"[ERROR] Failed to save to SQLite database: {e}")
+            print(f"[ERROR] Failed to save to Firestore database: {e}")
     
     # --- Generate Medical Advice using AI ---
     advice_prompt = (
@@ -707,7 +641,7 @@ async def analyze_image(
                 "status": "Moderate" if abcde_final["C_score"] > 50 else "Uniform"
             },
             "D_diameter": {
-                "value": round(random.uniform(3.0, 9.5), 1),
+                "value": round(abcde_final["D_score"] / 10.0, 1),
                 "score": abcde_final["D_score"]
             },
             "E_evolution": {
@@ -727,25 +661,22 @@ async def analyze_image(
 
 @app.post("/api/upload-avatar")
 async def upload_avatar(request: Request, file: UploadFile = File(...), authorization: str = Form(None)):
-    """Upload user avatar to local storage."""
+    """Upload user avatar to ImageKit Cloud Storage."""
     user = get_current_user(authorization)
     if not user:
         return {"status": "error", "message": "Unauthorized"}, 401
     
     try:
         contents = await file.read()
-        # Create a clean filename
         ext = os.path.splitext(file.filename)[1]
         if not ext: ext = ".jpg"
         
         filename = f"avatar_{user['uid']}{ext}"
-        file_save_path = os.path.join(STORAGE_PATH, filename)
+        image_url = upload_to_imagekit(contents, filename, folder="/avatars")
         
-        with open(file_save_path, "wb") as f:
-            f.write(contents)
-        
-        base_url = str(request.base_url).rstrip("/")
-        image_url = f"{base_url}/storage/{filename}"
+        if not image_url:
+            return {"status": "error", "message": "Failed to upload avatar to ImageKit"}, 500
+
         return {"status": "success", "url": image_url}
     except Exception as e:
         return {"status": "error", "message": str(e)}, 500

@@ -32,7 +32,8 @@ image = (
         "langgraph",
         "langchain",
         "requests",
-        "pillow"
+        "pillow",
+        "imagekitio"
     )
     # Add local directory contents to /root at container startup
     .add_local_dir(

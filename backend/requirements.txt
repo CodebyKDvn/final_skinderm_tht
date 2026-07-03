@@ -16,3 +16,4 @@ openai
 apscheduler
 langgraph
 langchain
+imagekitio
