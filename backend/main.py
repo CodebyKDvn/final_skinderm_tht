@@ -41,9 +41,14 @@ nv_client = OpenAI(
   max_retries = 0
 )
 
-# --- ImageKit Cloud Storage & Firestore Configuration ---
-import uuid
-from datetime import datetime
+# Patch for imagekitio Pydantic forward ref resolution
+try:
+    import imagekitio.types.shared.overlay as _overlay
+    import imagekitio.types.shared.src_options as _src_options
+    _src_options.Overlay = _overlay.Overlay
+except Exception:
+    pass
+
 from imagekitio import ImageKit
 
 IMAGEKIT_PUBLIC_KEY = os.getenv("IMAGEKIT_PUBLIC_KEY", "public_eilUB6xKm53YlRbH/rrMSl30xtg=")

@@ -17,7 +17,7 @@ image = (
         "fastapi==0.104.1",
         "uvicorn==0.24.0",
         "python-multipart==0.0.6",
-        "pydantic==2.5.2",
+        "pydantic>=2.7.0",
         "torch",
         "torchvision",
         "timm",
