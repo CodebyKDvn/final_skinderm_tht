@@ -39,7 +39,7 @@ image = (
     .add_local_dir(
         ".",
         remote_path="/root",
-        ignore=["**/__pycache__", "**/.env", "**/skinderm.db", "**/skinderm_storage"]
+        ignore=["**/__pycache__", "**/.env", "**/.git", "**/skinderm.db", "**/skinderm_storage"]
     )
 )
 
