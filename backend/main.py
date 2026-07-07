@@ -491,17 +491,36 @@ def process_image(image_bytes: bytes):
         # Average TTA for each model
         avg_probs_list = []
         if probs_list_a:
-            avg_probs_list.append(torch.stack(probs_list_a).mean(dim=0))
+            avg_probs_a = torch.stack(probs_list_a).mean(dim=0)
+            avg_probs_list.append(avg_probs_a)
+            pred_idx = torch.argmax(avg_probs_a).item()
+            lbl = LABELS[pred_idx] if pred_idx < len(LABELS) else "Unknown"
+            print(f"[Ensemble Log] Model A (EfficientNet+ConvNeXt) -> {lbl}: {avg_probs_a[pred_idx].item()*100:.2f}%")
         if probs_list_b:
-            avg_probs_list.append(torch.stack(probs_list_b).mean(dim=0))
+            avg_probs_b = torch.stack(probs_list_b).mean(dim=0)
+            avg_probs_list.append(avg_probs_b)
+            pred_idx = torch.argmax(avg_probs_b).item()
+            lbl = LABELS[pred_idx] if pred_idx < len(LABELS) else "Unknown"
+            print(f"[Ensemble Log] Model B (ConvNeXtV2) -> {lbl}: {avg_probs_b[pred_idx].item()*100:.2f}%")
         if probs_list_c:
-            avg_probs_list.append(torch.stack(probs_list_c).mean(dim=0))
+            avg_probs_c = torch.stack(probs_list_c).mean(dim=0)
+            avg_probs_list.append(avg_probs_c)
+            pred_idx = torch.argmax(avg_probs_c).item()
+            lbl = LABELS[pred_idx] if pred_idx < len(LABELS) else "Unknown"
+            print(f"[Ensemble Log] Model C (Eva02) -> {lbl}: {avg_probs_c[pred_idx].item()*100:.2f}%")
         if probs_list_d:
-            avg_probs_list.append(torch.stack(probs_list_d).mean(dim=0))
+            avg_probs_d = torch.stack(probs_list_d).mean(dim=0)
+            avg_probs_list.append(avg_probs_d)
+            pred_idx = torch.argmax(avg_probs_d).item()
+            lbl = LABELS[pred_idx] if pred_idx < len(LABELS) else "Unknown"
+            print(f"[Ensemble Log] Model D (SwinV2) -> {lbl}: {avg_probs_d[pred_idx].item()*100:.2f}%")
         
         # === Dynamic Average Ensemble ===
         if avg_probs_list:
             final_probs = torch.stack(avg_probs_list).mean(dim=0)
+            ensemble_idx = torch.argmax(final_probs).item()
+            ensemble_lbl = LABELS[ensemble_idx] if ensemble_idx < len(LABELS) else "Unknown"
+            print(f"[Ensemble Log] FINAL ENSEMBLE -> {ensemble_lbl}: {final_probs[ensemble_idx].item()*100:.2f}%")
         else:
             # Fallback: no models loaded
             return None
