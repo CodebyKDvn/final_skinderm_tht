@@ -473,28 +473,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Show and configure the premium original/heatmap toggle overlay
         if (data.heatmap_url) {
-            document.getElementById('imgPreview').src = data.heatmap_url;
+            // Setup the base image and the heatmap overlay image
+            const previewImg = document.getElementById('imgPreview');
+            const heatmapOverlayImg = document.getElementById('imgHeatmapOverlay');
+            
+            previewImg.src = state.lastCapturedImage; // Base image remains the original scan
+            heatmapOverlayImg.src = data.heatmap_url; // Heatmap URL is loaded in the overlay
+            heatmapOverlayImg.classList.remove('hidden');
+            
             const toggleOverlay = document.getElementById('heatmapToggleOverlay');
             if (toggleOverlay) {
                 toggleOverlay.classList.remove('hidden');
-                const btnOrig = document.getElementById('btnPreviewShowOriginal');
-                const btnHeat = document.getElementById('btnPreviewShowHeatmap');
-                const previewImg = document.getElementById('imgPreview');
-
-                btnHeat.classList.add('btn-blue');
-                btnOrig.classList.remove('btn-blue');
-
-                btnOrig.onclick = () => {
-                    previewImg.src = state.lastCapturedImage;
-                    btnOrig.classList.add('btn-blue');
-                    btnHeat.classList.remove('btn-blue');
+                
+                const slider = document.getElementById('heatmapOpacitySlider');
+                const valDisplay = document.getElementById('heatmapOpacityValue');
+                
+                // Set default to 0%
+                slider.value = 0;
+                valDisplay.innerText = "0%";
+                heatmapOverlayImg.style.opacity = "0";
+                
+                // Add event listener for the slider
+                slider.oninput = function() {
+                    const val = this.value;
+                    valDisplay.innerText = `${val}%`;
+                    heatmapOverlayImg.style.opacity = val / 100;
                 };
 
-                btnHeat.onclick = () => {
-                    previewImg.src = data.heatmap_url;
-                    btnHeat.classList.add('btn-blue');
-                    btnOrig.classList.remove('btn-blue');
-                };
+                // Segmentation Border Toggle
+                const toggleSegBtn = document.getElementById('toggleSegBtn');
+                const segBorder = document.getElementById('segmentationBorder');
+                if (toggleSegBtn && segBorder) {
+                    toggleSegBtn.onclick = function() {
+                        const isHidden = segBorder.style.opacity === "0" || segBorder.style.opacity === "";
+                        segBorder.style.opacity = isHidden ? "1" : "0";
+                        toggleSegBtn.innerText = isHidden ? "Ẩn" : "Hiện";
+                        toggleSegBtn.style.background = isHidden ? "rgba(0, 255, 204, 0.2)" : "transparent";
+                    };
+                }
             }
         }
 
@@ -518,24 +534,42 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!container || !abcde) return;
 
         const metrics = [
-            { id: 'A', label: 'Asymmetry', val: abcde.A_asymmetry.score, status: abcde.A_asymmetry.status, color: 'var(--danger)' },
-            { id: 'B', label: 'Border', val: abcde.B_border.score, status: abcde.B_border.status, color: 'var(--warning)' },
-            { id: 'C', label: 'Color', val: abcde.C_color.score, status: abcde.C_color.status, color: 'var(--medical-blue-base)' },
-            { id: 'D', label: 'Diameter', val: abcde.D_diameter.score, status: `${abcde.D_diameter.value}mm`, color: 'var(--success)' },
-            { id: 'E', label: 'Evolution', val: abcde.E_evolution.score, status: 'Historical', color: '#8b5cf6' }
+            { id: 'A', label: 'Asymmetry', val: abcde.A_asymmetry.score, status: abcde.A_asymmetry.status, color: 'var(--danger)', desc: 'Tính bất đối xứng: Hai nửa của nốt ruồi không khớp nhau.' },
+            { id: 'B', label: 'Border', val: abcde.B_border.score, status: abcde.B_border.status, color: 'var(--warning)', desc: 'Đường viền: Viền nốt ruồi mờ nhạt, không đều hoặc nham nhở.' },
+            { id: 'C', label: 'Color', val: abcde.C_color.score, status: abcde.C_color.status, color: 'var(--medical-blue-base)', desc: 'Màu sắc: Màu không đồng nhất, có nhiều sắc thái như đen, nâu, đỏ, trắng.' },
+            { id: 'D', label: 'Diameter', val: abcde.D_diameter.score, status: `${abcde.D_diameter.value}mm`, color: 'var(--success)', desc: 'Đường kính: Kích thước lớn hơn 6mm (cỡ cục tẩy bút chì) là dấu hiệu cảnh báo.' },
+            { id: 'E', label: 'Evolution', val: abcde.E_evolution.score, status: 'Historical', color: '#8b5cf6', desc: 'Sự tiến triển: Nốt ruồi thay đổi kích thước, hình dáng hoặc màu sắc theo thời gian.' }
         ];
 
         container.innerHTML = metrics.map(m => `
-            <div class="abcde-row">
-                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 6px;">
+            <div class="abcde-row" data-desc="${m.desc}" style="padding: 6px; border-radius: 6px; transition: background 0.2s;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 6px; pointer-events: none;">
                     <span style="font-weight: 600; color: var(--text-primary);">${m.id}. ${m.label}</span>
                     <span style="color: var(--text-muted); font-weight: 500;">${m.status}</span>
                 </div>
-                <div style="height: 6px; background: rgba(0,0,0,0.05); border-radius: 3px; overflow: hidden;">
+                <div style="height: 6px; background: rgba(0,0,0,0.05); border-radius: 3px; overflow: hidden; pointer-events: none;">
                     <div style="width: ${m.val}%; height: 100%; background: ${m.color}; border-radius: 3px; transition: width 1s ease-out;"></div>
                 </div>
             </div>
         `).join('');
+
+        const detailBox = document.getElementById('abcdeDetailBox');
+        const detailText = document.getElementById('abcdeDetailText');
+        if (detailBox && detailText) {
+            detailBox.style.display = 'block';
+            
+            const rows = container.querySelectorAll('.abcde-row');
+            rows.forEach(row => {
+                row.addEventListener('mouseenter', () => {
+                    row.style.background = 'rgba(0, 0, 0, 0.03)';
+                    detailText.innerText = row.getAttribute('data-desc');
+                });
+                row.addEventListener('mouseleave', () => {
+                    row.style.background = 'transparent';
+                    detailText.innerText = 'Hover vào từng chỉ số để xem chi tiết.';
+                });
+            });
+        }
     }
 
     function renderHistory() {

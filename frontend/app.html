@@ -187,11 +187,27 @@
                         <!-- Preview View -->
                         <div id="viewPreview" class="hidden" style="flex: 1; display: flex; flex-direction: column;">
                             <div class="preview-container" id="previewContainer" style="flex: 1; min-height: 380px; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.95); border-radius: 24px; overflow: hidden; position: relative;">
-                                <img src="" id="imgPreview" alt="Skin Lesion" style="max-height: 100%; max-width: 100%; object-fit: contain; display: block; border-radius: 12px;">
+                                <img src="" id="imgPreview" alt="Skin Lesion" style="max-height: 100%; max-width: 100%; object-fit: contain; display: block; border-radius: 12px; z-index: 1;">
+                                <img src="" id="imgHeatmapOverlay" class="hidden" alt="Heatmap Overlay" style="position: absolute; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 0.2s ease; z-index: 2; pointer-events: none; mix-blend-mode: hard-light;">
+                                
+                                <!-- Segmentation Border -->
+                                <svg id="segmentationBorder" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 3;" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                    <path d="M35,35 Q50,20 65,35 T65,65 Q50,80 35,65 Z" fill="rgba(0, 255, 204, 0.1)" stroke="#00ffcc" stroke-width="1.5" stroke-dasharray="2,2"></path>
+                                </svg>
+                                
                                 <div class="scan-laser"></div>
-                                <div id="heatmapToggleOverlay" class="hidden" style="position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; gap: 8px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                    <button class="btn-pill" id="btnPreviewShowOriginal" style="font-size: 0.75rem; padding: 4px 10px; background: transparent; border: none; color: white; cursor: pointer;">Ảnh gốc</button>
-                                    <button class="btn-pill btn-blue" id="btnPreviewShowHeatmap" style="font-size: 0.75rem; padding: 4px 10px; cursor: pointer;">Bản đồ nhiệt AI</button>
+                                
+                                <div id="heatmapToggleOverlay" class="hidden" style="position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; flex-direction: column; gap: 8px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 12px 16px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); width: 85%; max-width: 320px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="font-size: 0.8rem; font-weight: 500; color: white;"><i class="fa-solid fa-layer-group" style="margin-right: 5px;"></i> Lớp phủ Grad-CAM</span>
+                                        <span id="heatmapOpacityValue" style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; color: var(--primary-lime); font-weight: bold;">0%</span>
+                                    </div>
+                                    <input type="range" id="heatmapOpacitySlider" min="0" max="100" value="0" style="width: 100%; accent-color: var(--primary-lime); cursor: pointer;">
+                                    
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                                        <span style="font-size: 0.75rem; font-weight: 500; color: white;">Viền U-Net</span>
+                                        <button id="toggleSegBtn" class="btn-pill" style="font-size: 0.7rem; padding: 2px 8px; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; cursor: pointer;">Hiện</button>
+                                    </div>
                                 </div>
                             </div>
                             <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
@@ -203,34 +219,43 @@
 
                     <!-- Results Panel -->
                     <div class="card-glass" id="scanResultsArea">
-                        <div class="card-header"><i class="fa-solid fa-stethoscope"></i> Báo cáo Chẩn đoán</div>
-                        
-                        <div id="resultEmpty" style="text-align: center; color: var(--text-muted); padding: 4rem 1rem;">
-                            <i class="fa-solid fa-robot fa-3x" style="opacity: 0.2; margin-bottom: 1.5rem;"></i>
-                            <p style="font-weight: 500;">Hệ thống AI đang chờ dữ liệu hình ảnh.</p>
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fa-solid fa-file-medical"></i> Báo cáo Y tế (AI)</h3>
                         </div>
-
-                        <div id="resultContent" class="hidden">
-                            <div class="score-circle-container">
-                                <div>
-                                    <div id="riskScore">--</div>
-                                    <div class="score-badge" id="riskLevelBadge">Độ rủi ro</div>
-                                </div>
+                        <div class="card-body">
+                            
+                            <!-- State: Empty -->
+                            <div id="resultEmpty" style="text-align: center; padding: 2rem 0; color: var(--text-muted);">
+                                <i class="fa-solid fa-notes-medical" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                <p data-i18n="result_empty">Kết quả phân tích sẽ hiển thị ở đây.</p>
                             </div>
 
-                            <div style="margin-bottom: 1.5rem;">
-                                <h4 style="font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-primary);">Top 3 Chẩn đoán AI:</h4>
-                                <div id="topPredictionsList" style="display: flex; flex-direction: column; gap: 0.5rem;">
-                                    <!-- Predictions Injected -->
+                            <!-- State: Analyzed -->
+                            <div id="resultContent" class="hidden">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-light);">
+                                    <div>
+                                        <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Mức độ rủi ro</span>
+                                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--text-primary); line-height: 1;" id="riskScore">--%</div>
+                                    </div>
+                                    <div class="score-badge pill-success" id="riskLevelBadge">Lành tính</div>
                                 </div>
-                            </div>
 
-                            <div style="background: var(--bg-app); border-radius: var(--radius-md); border: 1px solid var(--border-light); padding: 1.25rem; margin-bottom: 1.5rem;">
-                                <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-primary);"><i class="fa-solid fa-dna" style="color: var(--medical-blue-base)"></i> Phân tích chuẩn ABCDE:</h4>
-                                <div id="abcdeChartContainer" style="display: flex; flex-direction: column; gap: 1rem;">
-                                    <!-- ABCDE Bars Injected JS -->
+                                <div style="margin-bottom: 1.5rem;">
+                                    <h4 style="font-size: 0.95rem; margin-bottom: 0.75rem; color: var(--text-primary);">Dự đoán chi tiết:</h4>
+                                    <div id="topPredictionsList" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem;">
+                                        <!-- Top Predictions Injected by JS -->
+                                    </div>
                                 </div>
-                            </div>
+
+                                <div style="background: var(--bg-app); border-radius: var(--radius-md); border: 1px solid var(--border-light); padding: 1.25rem; margin-bottom: 1.5rem;">
+                                    <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-primary);"><i class="fa-solid fa-dna" style="color: var(--medical-blue-base)"></i> Phân tích chuẩn ABCDE:</h4>
+                                    <div id="abcdeChartContainer" style="display: flex; flex-direction: column; gap: 1rem; cursor: pointer;">
+                                        <!-- ABCDE Bars Injected JS -->
+                                    </div>
+                                    <div id="abcdeDetailBox" style="background: rgba(0,0,0,0.03); border-radius: 8px; padding: 0.75rem; margin-top: 1rem; font-size: 0.8rem; color: var(--text-secondary); display: none; border-left: 3px solid var(--medical-blue-base);">
+                                        <strong>Chi tiết:</strong> <span id="abcdeDetailText">Hover vào từng chỉ số để xem chi tiết.</span>
+                                    </div>
+                                </div>
 
                             <div style="background: var(--medical-blue-light); border-radius: var(--radius-md); padding: 1.25rem;">
                                 <h4 style="font-size: 0.95rem; margin-bottom: 0.5rem; color: var(--medical-blue-dark);"><i class="fa-solid fa-lightbulb"></i> <span data-i18n="scan_advice">Lời khuyên Y khoa:</span></h4>
