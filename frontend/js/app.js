@@ -471,47 +471,55 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('medicalAdvice').innerHTML = marked.parse(CHAT.processAIContent(data.medical_advice || "Chưa có lời khuyên."));
         renderABCDEChart(data.abcde);
 
-        // Show and configure the premium original/heatmap toggle overlay
+        // Configure the premium original/heatmap toggle overlay
+        const previewImg = document.getElementById('imgPreview');
+        const heatmapOverlayImg = document.getElementById('imgHeatmapOverlay');
+        const toggleOverlay = document.getElementById('heatmapToggleOverlay');
+        const slider = document.getElementById('heatmapOpacitySlider');
+        const valDisplay = document.getElementById('heatmapOpacityValue');
+        
+        previewImg.src = state.lastCapturedImage; // Base image remains the original scan
+
+        // Always show the overlay container so Seg Border toggle is accessible
+        if (toggleOverlay) {
+            toggleOverlay.classList.remove('hidden');
+        }
+
+        // Configure Heatmap if available
         if (data.heatmap_url) {
-            // Setup the base image and the heatmap overlay image
-            const previewImg = document.getElementById('imgPreview');
-            const heatmapOverlayImg = document.getElementById('imgHeatmapOverlay');
-            
-            previewImg.src = state.lastCapturedImage; // Base image remains the original scan
-            heatmapOverlayImg.src = data.heatmap_url; // Heatmap URL is loaded in the overlay
+            heatmapOverlayImg.src = data.heatmap_url;
             heatmapOverlayImg.classList.remove('hidden');
             
-            const toggleOverlay = document.getElementById('heatmapToggleOverlay');
-            if (toggleOverlay) {
-                toggleOverlay.classList.remove('hidden');
-                
-                const slider = document.getElementById('heatmapOpacitySlider');
-                const valDisplay = document.getElementById('heatmapOpacityValue');
-                
-                // Set default to 0%
+            if (slider && valDisplay) {
+                slider.disabled = false;
                 slider.value = 0;
                 valDisplay.innerText = "0%";
                 heatmapOverlayImg.style.opacity = "0";
                 
-                // Add event listener for the slider
                 slider.oninput = function() {
                     const val = this.value;
                     valDisplay.innerText = `${val}%`;
                     heatmapOverlayImg.style.opacity = val / 100;
                 };
-
-                // Segmentation Border Toggle
-                const toggleSegBtn = document.getElementById('toggleSegBtn');
-                const segBorder = document.getElementById('segmentationBorder');
-                if (toggleSegBtn && segBorder) {
-                    toggleSegBtn.onclick = function() {
-                        const isHidden = segBorder.style.opacity === "0" || segBorder.style.opacity === "";
-                        segBorder.style.opacity = isHidden ? "1" : "0";
-                        toggleSegBtn.innerText = isHidden ? "Ẩn" : "Hiện";
-                        toggleSegBtn.style.background = isHidden ? "rgba(0, 255, 204, 0.2)" : "transparent";
-                    };
-                }
             }
+        } else {
+            // Disable heatmap slider if no backend heatmap is returned
+            if (slider && valDisplay) {
+                slider.disabled = true;
+                valDisplay.innerText = "N/A";
+            }
+        }
+
+        // Segmentation Border Toggle
+        const toggleSegBtn = document.getElementById('toggleSegBtn');
+        const segBorder = document.getElementById('segmentationBorder');
+        if (toggleSegBtn && segBorder) {
+            toggleSegBtn.onclick = function() {
+                const isHidden = segBorder.style.opacity === "0" || segBorder.style.opacity === "";
+                segBorder.style.opacity = isHidden ? "1" : "0";
+                toggleSegBtn.innerText = isHidden ? "Ẩn" : "Hiện";
+                toggleSegBtn.style.background = isHidden ? "rgba(0, 255, 204, 0.2)" : "transparent";
+            };
         }
 
         // Add to history state locally for immediate update
