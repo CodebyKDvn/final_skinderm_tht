@@ -146,6 +146,26 @@ class ConvNextModel(nn.Module):
         return self.model(x)
 
 # ---------------------------------------------------------
+# 1c. EVA02-SMALL MODEL (standalone) -> 9 classes
+# ---------------------------------------------------------
+class Eva02Model(nn.Module):
+    def __init__(self, num_classes=9):
+        super().__init__()
+        self.model = timm.create_model('eva02_small_patch14_336.mim_in22k_ft_in1k', pretrained=False, num_classes=num_classes)
+    def forward(self, x):
+        return self.model(x)
+
+# ---------------------------------------------------------
+# 1d. SWINV2-SMALL MODEL (standalone) -> 9 classes
+# ---------------------------------------------------------
+class SwinV2Model(nn.Module):
+    def __init__(self, num_classes=9):
+        super().__init__()
+        self.model = timm.create_model('swinv2_small_window8_256.ms_in1k', pretrained=False, num_classes=num_classes)
+    def forward(self, x):
+        return self.model(x)
+
+# ---------------------------------------------------------
 # 2. SEGMENTATION UNET MODEL (smp.Unet - mit_b5)
 # ---------------------------------------------------------
 # using segmentation_models_pytorch instead of manual Unet
@@ -160,10 +180,8 @@ device_type = 'cuda' if torch.cuda.is_available() else 'cpu'
 MODEL_LOADED = False
 model_a = None
 model_b = None
-
-# Trọng số Weighted Ensemble: Model A (xịn hơn) chiếm 60%, Model B 40%
-W_A = 0.6
-W_B = 0.4
+model_c = None
+model_d = None
 
 try:
     # 1. Load Model A: EnsembleModel (efficientnet_b3 + convnext_tiny) -> 8 classes
@@ -196,7 +214,39 @@ except Exception as e:
     model_b = None
 
 try:
-    # 3. Load Segmentation Model (mit_b5 Unet)
+    # 3. Load Model C: Eva02-Small -> 9 classes
+    DIAG_MODEL_PATH_C = "models/best_eva02_small_patch14_336.pth"
+    model_c = Eva02Model(num_classes=9)
+    ckpt_c = torch.load(DIAG_MODEL_PATH_C, map_location=device)
+    sd_c = ckpt_c['state_dict'] if 'state_dict' in ckpt_c else ckpt_c
+    # Strip 'model.' prefix if present
+    sd_c = {k[len('model.'):] if k.startswith('model.') else k: v for k, v in sd_c.items()}
+    model_c.model.load_state_dict(sd_c)
+    model_c.to(device)
+    model_c.eval()
+    print(f"[OK] Loaded Model C (Eva02-Small, 9 classes) onto {device}")
+except Exception as e:
+    print(f"[WARN] Failed to load Model C: {e}")
+    model_c = None
+
+try:
+    # 4. Load Model D: Swinv2-Small -> 9 classes
+    DIAG_MODEL_PATH_D = "models/best_swinv2_small_window8_256.pth"
+    model_d = SwinV2Model(num_classes=9)
+    ckpt_d = torch.load(DIAG_MODEL_PATH_D, map_location=device)
+    sd_d = ckpt_d['state_dict'] if 'state_dict' in ckpt_d else ckpt_d
+    # Strip 'model.' prefix if present
+    sd_d = {k[len('model.'):] if k.startswith('model.') else k: v for k, v in sd_d.items()}
+    model_d.model.load_state_dict(sd_d)
+    model_d.to(device)
+    model_d.eval()
+    print(f"[OK] Loaded Model D (Swinv2-Small, 9 classes) onto {device}")
+except Exception as e:
+    print(f"[WARN] Failed to load Model D: {e}")
+    model_d = None
+
+try:
+    # 5. Load Segmentation Model (mit_b5 Unet)
     SEG_MODEL_PATH = "models/best_mit_b5_unet.pth"
     print("Loading segmentation model (339MB)...")
     model_seg = smp.Unet(
@@ -215,10 +265,10 @@ except Exception as e:
 
 NUM_ENSEMBLE_CLASSES = 9  # max classes across all models
 
-if model_a is not None or model_b is not None:
+if any(m is not None for m in [model_a, model_b, model_c, model_d]):
     MODEL_LOADED = True
-    loaded_count = sum(1 for m in [model_a, model_b] if m is not None)
-    print(f"\n=== Weighted Ensemble ready with {loaded_count}/2 diagnosis model(s) (W_A={W_A}, W_B={W_B}) ===")
+    loaded_count = sum(1 for m in [model_a, model_b, model_c, model_d] if m is not None)
+    print(f"\n=== Ensemble ready with {loaded_count}/4 diagnosis model(s) ===")
 else:
     MODEL_LOADED = False
     print("\n=== No diagnosis models loaded! ===")
@@ -387,22 +437,36 @@ def process_image(image_bytes: bytes):
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
     
+    diag_transform_256 = transforms.Compose([
+        transforms.Resize((256, 256)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    diag_transform_336 = transforms.Compose([
+        transforms.Resize((336, 336)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+    
     with torch.no_grad():
-        # Tách riêng predictions cho từng model để áp trọng số
-        probs_list_a = []  # Lưu predictions Model A qua các TTA
-        probs_list_b = []  # Lưu predictions Model B qua các TTA
+        probs_list_a = []  # Model A
+        probs_list_b = []  # Model B
+        probs_list_c = []  # Model C (Eva02)
+        probs_list_d = []  # Model D (SwinV2)
         
         for tta_fn in tta_augments:
             aug_image = tta_fn(cropped_image)
             tensor_224 = diag_transform_224(aug_image).unsqueeze(0).to(device)
+            tensor_256 = diag_transform_256(aug_image).unsqueeze(0).to(device)
+            tensor_336 = diag_transform_336(aug_image).unsqueeze(0).to(device)
             
-            # === Mixed Precision (AMP fp16) cho tốc độ và tiết kiệm VRAM ===
+            # === Mixed Precision (AMP fp16) ===
             with torch.amp.autocast(device_type=device_type):
-                # Model A: EnsembleModel (8 classes)
+                # Model A: EnsembleModel (8 classes -> pad to 9)
                 if model_a is not None:
                     outputs_a = model_a(tensor_224)
                     probs_a = torch.nn.functional.softmax(outputs_a[0], dim=0)
-                    # Pad từ 8 -> 9 classes (thêm 0 cho class cuối)
                     probs_a = torch.cat([probs_a, torch.zeros(NUM_ENSEMBLE_CLASSES - 8, device=probs_a.device)])
                     probs_list_a.append(probs_a)
                 
@@ -411,28 +475,35 @@ def process_image(image_bytes: bytes):
                     outputs_b = model_b(tensor_224)
                     probs_b = torch.nn.functional.softmax(outputs_b[0], dim=0)
                     probs_list_b.append(probs_b)
+
+                # Model C: Eva02-Small (9 classes)
+                if model_c is not None:
+                    outputs_c = model_c(tensor_336)
+                    probs_c = torch.nn.functional.softmax(outputs_c[0], dim=0)
+                    probs_list_c.append(probs_c)
+
+                # Model D: Swinv2-Small (9 classes)
+                if model_d is not None:
+                    outputs_d = model_d(tensor_256)
+                    probs_d = torch.nn.functional.softmax(outputs_d[0], dim=0)
+                    probs_list_d.append(probs_d)
         
-        # Trung bình TTA cho từng model
+        # Average TTA for each model
+        avg_probs_list = []
         if probs_list_a:
-            avg_probs_a = torch.stack(probs_list_a).mean(dim=0)  # [9]
-        else:
-            avg_probs_a =None
-            
+            avg_probs_list.append(torch.stack(probs_list_a).mean(dim=0))
         if probs_list_b:
-            avg_probs_b = torch.stack(probs_list_b).mean(dim=0)  # [9]
-        else:
-            avg_probs_b = None
+            avg_probs_list.append(torch.stack(probs_list_b).mean(dim=0))
+        if probs_list_c:
+            avg_probs_list.append(torch.stack(probs_list_c).mean(dim=0))
+        if probs_list_d:
+            avg_probs_list.append(torch.stack(probs_list_d).mean(dim=0))
         
-        # === Weighted Average Ensemble ===
-        if avg_probs_a is not None and avg_probs_b is not None:
-            # Cả 2 model đều sẵn sàng -> Weighted Average
-            final_probs = (avg_probs_a * W_A) + (avg_probs_b * W_B)
-        elif avg_probs_a is not None:
-            final_probs = avg_probs_a
-        elif avg_probs_b is not None:
-            final_probs = avg_probs_b
+        # === Dynamic Average Ensemble ===
+        if avg_probs_list:
+            final_probs = torch.stack(avg_probs_list).mean(dim=0)
         else:
-            # Fallback: không model nào load được
+            # Fallback: no models loaded
             return None
         
         confidence, predicted = torch.max(final_probs, 0)
