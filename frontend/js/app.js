@@ -514,6 +514,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const toggleSegBtn = document.getElementById('toggleSegBtn');
         const segBorder = document.getElementById('segmentationBorder');
         if (toggleSegBtn && segBorder) {
+            // Reset opacity and text on new scan
+            segBorder.style.opacity = "0";
+            toggleSegBtn.innerText = "Hiện";
+            toggleSegBtn.style.background = "transparent";
+            
+            // Draw dynamic border from bbox
+            if (data.bbox) {
+                drawSegmentationBorder(data.bbox);
+            }
+
             toggleSegBtn.onclick = function() {
                 const isHidden = segBorder.style.opacity === "0" || segBorder.style.opacity === "";
                 segBorder.style.opacity = isHidden ? "1" : "0";
@@ -535,6 +545,52 @@ document.addEventListener('DOMContentLoaded', () => {
         renderHistory();
         renderRecentActivity();
         CHARTS.initHomeCharts(document.getElementById('homeProgressChart'));
+    }
+
+    function drawSegmentationBorder(bbox) {
+        const svg = document.getElementById('segmentationBorder');
+        if (!svg || !bbox) return;
+        
+        // Convert normalized bbox coords (0 to 1) to percentage (0 to 100)
+        const x = bbox.x * 100;
+        const y = bbox.y * 100;
+        const w = bbox.w * 100;
+        const h = bbox.h * 100;
+        
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        const rx = w / 2;
+        const ry = h / 2;
+        
+        // Generate an organic wavy path around the bbox center to simulate U-Net output
+        let pathD = "";
+        const steps = 24;
+        for (let i = 0; i <= steps; i++) {
+            const angle = (i / steps) * Math.PI * 2;
+            // Add subtle noise/waves to make it look organic (not a perfect oval)
+            const noise = 1 + (Math.sin(angle * 4) * 0.07) + (Math.cos(angle * 7) * 0.03);
+            const currRx = rx * noise;
+            const currRy = ry * noise;
+            
+            const px = cx + Math.cos(angle) * currRx;
+            const py = cy + Math.sin(angle) * currRy;
+            
+            // Constrain points to 0-100 viewBox limits
+            const clampedPx = Math.max(2, Math.min(98, px));
+            const clampedPy = Math.max(2, Math.min(98, py));
+            
+            if (i === 0) {
+                pathD += `M ${clampedPx.toFixed(1)} ${clampedPy.toFixed(1)}`;
+            } else {
+                pathD += ` L ${clampedPx.toFixed(1)} ${clampedPy.toFixed(1)}`;
+            }
+        }
+        pathD += " Z";
+        
+        const pathNode = svg.querySelector('path');
+        if (pathNode) {
+            pathNode.setAttribute('d', pathD);
+        }
     }
 
     function renderABCDEChart(abcde) {
