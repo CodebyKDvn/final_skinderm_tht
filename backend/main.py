@@ -4,6 +4,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import time
 import asyncio
+import uuid
 import requests
 import json
 import numpy as np
