@@ -725,7 +725,7 @@ async def analyze_image(
     medical_advice = "Hệ thống đang chuẩn bị lời khuyên..."
     try:
         advice_res = nv_client.chat.completions.create(
-            model="meta/llama-3.3-70b-instruct",
+            model="meta/llama-3.1-8b-instruct",
             messages=[{"role": "user", "content": advice_prompt}],
             max_tokens=256,
             temperature=0.3,
@@ -884,7 +884,7 @@ async def compare_scans(req: CompareRequest):
     
     try:
         completion = nv_client.chat.completions.create(
-            model="meta/llama-3.3-70b-instruct",
+            model="meta/llama-3.1-70b-instruct",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=2048,
             temperature=0.3
@@ -907,7 +907,7 @@ async def compare_scans(req: CompareRequest):
 class ChatRequest(BaseModel):
     message: str
     language: str = "vi"
-    model: str = "meta/llama-3.3-70b-instruct"
+    model: str = "meta/llama-3.1-70b-instruct"
     context: str = ""
 
 @app.post("/api/chat")
@@ -915,7 +915,7 @@ async def chat_interaction(chat_req: ChatRequest, request: Request):
     system_prompt = (
         "Bạn là Skinderm AI, một trợ lý trí tuệ nhân tạo chuyên cung cấp thông tin hỗ trợ về các vấn đề da liễu. "
         "Bạn KHÔNG PHẢI là bác sĩ y khoa, không có chứng chỉ hành nghề, và bạn phải luôn tự nhận thức rõ vai trò là một máy móc hỗ trợ, tuyệt đối không được nhận mình là bác sĩ con người.\n"
-        "Hãy trả lời bằng tiếng Việt, với phong cách chuyên nghiệp, thân thiện, tận tâm, gần gũi và ấm áp, tránh sự khô khan hay cứng ngắc.\n\n"
+        "Hãy trả lời bằng tiếng Việt, với phong cách chuyên nghiệp, thân thiện, tận tâm, gần gũi và ấm áp, tránh sự khô khan hay cứng ngắc. ĐẶC BIỆT: Hãy giải thích mọi thứ bằng từ ngữ dễ hiểu nhất, tránh các thuật ngữ chuyên ngành phức tạp, hoặc nếu bắt buộc phải dùng thì phải định nghĩa rõ ràng để một người bình thường không biết gì về y tế cũng hiểu được.\n\n"
         "Dựa trên dữ liệu chẩn đoán sau: " + chat_req.context + "\n\n"
         "Nhiệm vụ của bạn là giải thích kết quả phân loại hình ảnh tổn thương da, cung cấp các thông tin y khoa cơ bản, nguyên nhân, và cách chăm sóc da thông thường liên quan đến 9 loại bệnh da liễu trong hệ thống. Tuyệt đối không trả lời các câu hỏi ngoài lề không liên quan đến da liễu.\n\n"
         "Hãy cấu trúc câu trả lời của bạn thật chuyên nghiệp và khoa học bằng cách sử dụng Markdown:\n"

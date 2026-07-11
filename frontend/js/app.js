@@ -51,6 +51,39 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  function translateDiagnosis(diagnosis) {
+    if (!diagnosis) return "Chưa xác định";
+    const d = diagnosis.toUpperCase();
+    if (d.includes("MEL") || d.includes("MELANOMA")) {
+      return "Ung thư hắc tố da (Nguy cơ cao - Cần khám ngay)";
+    }
+    if (d.includes("NV") || d.includes("MELANOCYTIC NEVUS") || d.includes("NEVUS")) {
+      return "Nốt ruồi thông thường (Lành tính - Yên tâm)";
+    }
+    if (d.includes("BCC") || d.includes("BASAL CELL CARCINOMA")) {
+      return "Ung thư tế bào đáy (Ác tính nhẹ - Nên điều trị sớm)";
+    }
+    if (d.includes("AK") || d.includes("ACTINIC KERATOSIS")) {
+      return "Dày sừng ánh sáng (Tổn thương tiền ung thư - Cần theo dõi)";
+    }
+    if (d.includes("BKL") || d.includes("BENIGN KERATOSIS")) {
+      return "Dày sừng lành tính (Lành tính - Do lão hóa da)";
+    }
+    if (d.includes("DF") || d.includes("DERMATOFIBROMA")) {
+      return "U sợi mô da lành tính (Lành tính - Vết sần lành)";
+    }
+    if (d.includes("VASC") || d.includes("VASCULAR LESION")) {
+      return "U máu / Tổn thương mạch máu lành tính";
+    }
+    if (d.includes("SCC") || d.includes("SQUAMOUS CELL CARCINOMA")) {
+      return "Ung thư tế bào vảy (Ác tính tiến triển - Cần sinh thiết)";
+    }
+    if (d.includes("UNKNOWN") || d.includes("UNK")) {
+      return "Không xác định rõ phân loại";
+    }
+    return diagnosis;
+  }
+
   async function fetchData() {
     try {
       const [historyRes, exploreRes] = await Promise.all([
@@ -64,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
           date: new Date(item.created_at).toLocaleString("vi-VN"),
           image: item.heatmap_url || item.image_url,
           risk: item.risk_score,
-          diagnosis: item.classification,
+          diagnosis: translateDiagnosis(item.classification),
           details: item,
         }));
         renderHistory();
@@ -604,7 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
       date: new Date().toLocaleString("vi-VN"),
       image: data.heatmap_url || state.lastCapturedImage,
       risk: score,
-      diagnosis: data.classification,
+      diagnosis: translateDiagnosis(data.classification),
       details: data,
     };
     state.history.unshift(newRecord);
@@ -663,59 +696,91 @@ document.addEventListener("DOMContentLoaded", () => {
     const container = document.getElementById("abcdeChartContainer");
     if (!container || !abcde) return;
 
+    // Helper to translate status values to friendly Vietnamese
+    function getFriendlyStatus(id, score, status) {
+      status = String(status).toUpperCase();
+      
+      if (id === "A") { // Asymmetry
+        if (status.includes("NORMAL")) return "Cân đối, tròn đều (Bình thường)";
+        if (status.includes("ABNORMAL")) return "Bị lệch, méo mó (Bất thường)";
+        return "Bất đối xứng";
+      }
+      if (id === "B") { // Border
+        if (status.includes("NORMAL")) return "Viền rõ nét, nhẵn (Bình thường)";
+        if (status.includes("ABNORMAL")) return "Viền răng cưa, nham nhở (Bất thường)";
+        return "Bờ không đều";
+      }
+      if (id === "C") { // Color
+        if (status.includes("UNIFORM") || status.includes("NORMAL")) return "Một màu đồng nhất (Bình thường)";
+        if (status.includes("MODERATE") || status.includes("ABNORMAL")) return "Nhiều màu loang lổ (Bất thường)";
+        return "Màu không đều";
+      }
+      if (id === "D") { // Diameter
+        const size = parseFloat(abcde.D_diameter.value) || 0;
+        if (size >= 6) return `${size}mm - Khá lớn (Cần theo dõi)`;
+        return `${size}mm - Nhỏ an toàn (< 6mm)`;
+      }
+      if (id === "E") { // Evolution
+        if (status.includes("REQUIRE") || status.includes("HISTORY")) return "Cần theo dõi thêm sự thay đổi";
+        if (status.includes("HISTORICAL") || status.includes("NORMAL")) return "Chưa thấy thay đổi";
+        return "Ổn định";
+      }
+      return status;
+    }
+
     const metrics = [
       {
         id: "A",
-        label: "Asymmetry",
+        label: "Hình dạng đối xứng (Asymmetry)",
         val: abcde.A_asymmetry.score,
-        status: abcde.A_asymmetry.status,
+        status: getFriendlyStatus("A", abcde.A_asymmetry.score, abcde.A_asymmetry.status),
         color: "var(--danger)",
-        desc: "Tính bất đối xứng: Hai nửa của nốt ruồi không khớp nhau.",
+        desc: "Độ cân đối hình dáng: Nốt ruồi lành tính thường tròn hoặc bầu dục đối xứng. Nốt ruồi có nguy cơ cao thường bị méo mó, hai nửa không giống nhau.",
       },
       {
         id: "B",
-        label: "Border",
+        label: "Đường viền xung quanh (Border)",
         val: abcde.B_border.score,
-        status: abcde.B_border.status,
+        status: getFriendlyStatus("B", abcde.B_border.score, abcde.B_border.status),
         color: "var(--warning)",
-        desc: "Đường viền: Viền nốt ruồi mờ nhạt, không đều hoặc nham nhở.",
+        desc: "Độ sắc nét của viền: Nốt ruồi bình thường có viền nhẵn và rõ ràng. Nếu đường viền mờ nhạt, có dạng răng cưa hay nham nhở như bản đồ thì là dấu hiệu cần lưu ý.",
       },
       {
         id: "C",
-        label: "Color",
+        label: "Màu sắc tổn thương (Color)",
         val: abcde.C_color.score,
-        status: abcde.C_color.status,
+        status: getFriendlyStatus("C", abcde.C_color.score, abcde.C_color.status),
         color: "var(--medical-blue-base)",
-        desc: "Màu sắc: Màu không đồng nhất, có nhiều sắc thái như đen, nâu, đỏ, trắng.",
+        desc: "Tính đồng nhất màu sắc: Nốt ruồi lành tính chỉ có duy nhất một màu ổn định (nâu hoặc đen). Nốt ruồi bất thường thường có loang lổ nhiều màu (đen xen lẫn nâu, đỏ, xám).",
       },
       {
         id: "D",
-        label: "Diameter",
+        label: "Kích thước đường kính (Diameter)",
         val: abcde.D_diameter.score,
-        status: `${abcde.D_diameter.value}mm`,
+        status: getFriendlyStatus("D", abcde.D_diameter.score, abcde.D_diameter.status),
         color: "var(--success)",
-        desc: "Đường kính: Kích thước lớn hơn 6mm (cỡ cục tẩy bút chì) là dấu hiệu cảnh báo.",
+        desc: "Độ lớn của nốt ruồi: Kích thước lớn hơn 6 milimét (bằng đường kính đầu tẩy bút chì) thường được coi là cảnh báo nguy cơ tiến triển.",
       },
       {
         id: "E",
-        label: "Evolution",
+        label: "Biến đổi theo thời gian (Evolution)",
         val: abcde.E_evolution.score,
-        status: "Historical",
+        status: getFriendlyStatus("E", abcde.E_evolution.score, abcde.E_evolution.status),
         color: "#8b5cf6",
-        desc: "Sự tiến triển: Nốt ruồi thay đổi kích thước, hình dáng hoặc màu sắc theo thời gian.",
+        desc: "Sự thay đổi: Theo dõi xem nốt ruồi có to lên, đổi màu, ngứa ngáy hay chảy máu theo thời gian hay không. Hãy so sánh hình ảnh chụp định kỳ định lượng.",
       },
     ];
 
     container.innerHTML = metrics
       .map(
         (m) => `
-            <div class="abcde-row" data-desc="${m.desc}" style="padding: 6px; border-radius: 6px; transition: background 0.2s;">
-                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 6px; pointer-events: none;">
-                    <span style="font-weight: 600; color: var(--text-primary);">${m.id}. ${m.label}</span>
-                    <span style="color: var(--text-muted); font-weight: 500;">${m.status}</span>
+            <div class="abcde-row" data-desc="${m.desc}" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-light); margin-bottom: 8px; transition: all 0.2s; cursor: help;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; pointer-events: none;">
+                    <span style="font-weight: 700; color: var(--text-primary);">${m.id}. ${m.label}</span>
+                    <span style="color: var(--medical-blue-dark); font-weight: 600; font-size: 0.8rem;">${m.status}</span>
                 </div>
-                <div style="height: 6px; background: rgba(0,0,0,0.05); border-radius: 3px; overflow: hidden; pointer-events: none;">
-                    <div style="width: ${m.val}%; height: 100%; background: ${m.color}; border-radius: 3px; transition: width 1s ease-out;"></div>
+                <div style="height: 8px; background: rgba(0,0,0,0.05); border-radius: 4px; overflow: hidden; pointer-events: none;">
+                    <div style="width: ${m.val}%; height: 100%; background: ${m.color}; border-radius: 4px; transition: width 1s ease-out;"></div>
                 </div>
             </div>
         `,
@@ -726,16 +791,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const detailText = document.getElementById("abcdeDetailText");
     if (detailBox && detailText) {
       detailBox.style.display = "block";
+      detailText.innerText = "Di chuột vào (hoặc chạm vào) từng chỉ số A-B-C-D-E ở trên để xem giải thích chi tiết dễ hiểu.";
 
       const rows = container.querySelectorAll(".abcde-row");
       rows.forEach((row) => {
         row.addEventListener("mouseenter", () => {
           row.style.background = "rgba(0, 0, 0, 0.03)";
+          row.style.borderColor = "var(--medical-blue-light)";
           detailText.innerText = row.getAttribute("data-desc");
         });
         row.addEventListener("mouseleave", () => {
           row.style.background = "transparent";
-          detailText.innerText = "Hover vào từng chỉ số để xem chi tiết.";
+          row.style.borderColor = "var(--border-light)";
+          detailText.innerText = "Di chuột vào (hoặc chạm vào) từng chỉ số A-B-C-D-E ở trên để xem giải thích chi tiết dễ hiểu.";
         });
       });
     }

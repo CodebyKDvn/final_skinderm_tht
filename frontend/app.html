@@ -250,12 +250,12 @@
                                 </div>
 
                                 <div style="background: var(--bg-app); border-radius: var(--radius-md); border: 1px solid var(--border-light); padding: 1.25rem; margin-bottom: 1.5rem;">
-                                    <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-primary);"><i class="fa-solid fa-dna" style="color: var(--medical-blue-base)"></i> Phân tích chuẩn ABCDE:</h4>
+                                    <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-primary);"><i class="fa-solid fa-dna" style="color: var(--medical-blue-base)"></i> Đánh giá 5 dấu hiệu nốt ruồi bất thường (Quy tắc ABCDE):</h4>
                                     <div id="abcdeChartContainer" style="display: flex; flex-direction: column; gap: 1rem; cursor: pointer;">
                                         <!-- ABCDE Bars Injected JS -->
                                     </div>
                                     <div id="abcdeDetailBox" style="background: rgba(0,0,0,0.03); border-radius: 8px; padding: 0.75rem; margin-top: 1rem; font-size: 0.8rem; color: var(--text-secondary); display: none; border-left: 3px solid var(--medical-blue-base);">
-                                        <strong>Chi tiết:</strong> <span id="abcdeDetailText">Hover vào từng chỉ số để xem chi tiết.</span>
+                                        <strong>Giải thích dễ hiểu:</strong> <span id="abcdeDetailText">Di chuột hoặc chạm vào từng chỉ số để xem giải thích.</span>
                                     </div>
                                 </div>
 
@@ -469,9 +469,8 @@
 
                     <!-- Model Select -->
                     <select id="chatModelSelect" style="border: 1px solid var(--border-light); border-radius: 12px; padding: 8px 16px; font-size: 0.85rem; font-weight: 600; background: #f8fafc; outline: none; cursor: pointer;">
-                        <option value="minimaxai/minimax-m2.7">Skinderm o1</option>
-                        <option value="z-ai/glm5">Skinderm Pro</option>
-                        <option value="meta/llama-3.3-70b-instruct" selected>Skinderm Turbo</option>
+                        <option value="meta/llama-3.1-8b-instruct">Skinderm Lite (Mượt mà)</option>
+                        <option value="meta/llama-3.1-70b-instruct" selected>Skinderm Pro (Chuyên sâu)</option>
                     </select>
                 </div>
             </div>
