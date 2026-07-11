@@ -432,6 +432,23 @@ document.addEventListener("DOMContentLoaded", () => {
     if (sectionId === "sec-home") updateHomeGreeting();
     if (sectionId === "sec-doctor")
       document.getElementById("chatInput").focus();
+      
+    if (sectionId === "sec-explore") {
+      const isFallback = state.blogPosts.length === 0 || 
+        (state.blogPosts.length === 1 && state.blogPosts[0].title.includes("phân tích xu hướng"));
+      
+      if (isFallback) {
+        API.getExploreContent(state.lang).then(exploreRes => {
+          if (exploreRes.status === "success" && exploreRes.data.length > 0) {
+            const isDataFallback = exploreRes.data.length === 1 && exploreRes.data[0].title.includes("phân tích xu hướng");
+            if (!isDataFallback) {
+              state.blogPosts = exploreRes.data;
+              renderBlogPosts();
+            }
+          }
+        });
+      }
+    }
   }
 
   async function updateWeather() {

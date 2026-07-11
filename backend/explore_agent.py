@@ -187,6 +187,18 @@ workflow.add_edge("write_blogs", END)
 
 explore_app = workflow.compile()
 
+CACHE_FILE_PATH = os.path.join(os.environ.get("STORAGE_ROOT", "."), "explore_cache.json")
+
+def load_cached_blogs():
+    global LATEST_BLOG_POSTS
+    if os.path.exists(CACHE_FILE_PATH):
+        try:
+            with open(CACHE_FILE_PATH, "r", encoding="utf-8") as f:
+                LATEST_BLOG_POSTS = json.load(f)
+            print(f"[LangGraph] Loaded {len(LATEST_BLOG_POSTS)} blogs from persistent cache: {CACHE_FILE_PATH}")
+        except Exception as e:
+            print(f"[LangGraph] Failed to load cached blogs: {e}")
+
 def run_explore_workflow():
     global LATEST_BLOG_POSTS
     print("[LangGraph] Starting scheduled blog generation...")
@@ -195,8 +207,22 @@ def run_explore_workflow():
         if final_state and "blogs" in final_state:
             LATEST_BLOG_POSTS = final_state["blogs"]
             print(f"[LangGraph] Generated {len(LATEST_BLOG_POSTS)} new blog posts successfully.")
+            # Save to persistent cache
+            try:
+                os.makedirs(os.path.dirname(CACHE_FILE_PATH), exist_ok=True)
+                with open(CACHE_FILE_PATH, "w", encoding="utf-8") as f:
+                    json.dump(LATEST_BLOG_POSTS, f, ensure_ascii=False, indent=4)
+                print(f"[LangGraph] Saved blogs to persistent cache: {CACHE_FILE_PATH}")
+            except Exception as ce:
+                print(f"[LangGraph] Failed to save blogs cache: {ce}")
     except Exception as e:
         print(f"[LangGraph] Workflow failed: {e}")
 
 def get_latest_blogs():
+    global LATEST_BLOG_POSTS
+    if not LATEST_BLOG_POSTS:
+        load_cached_blogs()
     return LATEST_BLOG_POSTS
+
+# Load cache on import
+load_cached_blogs()
