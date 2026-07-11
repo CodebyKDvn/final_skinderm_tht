@@ -26,7 +26,8 @@ class FirebaseAuthManager:
             # Check if already initialized
             firebase_admin.get_app()
             print("[INFO] Firebase Admin already initialized.")
-            self.db = firestore.client()
+            db_id = os.getenv("FIREBASE_DATABASE_ID", "skindermai")
+            self.db = firestore.client(database_id=db_id)
         except ValueError:
             # Not initialized, proceed
             cert_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "serviceaccount.json")
@@ -36,8 +37,9 @@ class FirebaseAuthManager:
                 firebase_admin.initialize_app(cred, {
                     'databaseURL': os.getenv("FIREBASE_DATABASE_URL")
                 })
-                self.db = firestore.client()
-                print(f"[OK] Firebase Admin & Firestore initialized using {cert_path}")
+                db_id = os.getenv("FIREBASE_DATABASE_ID", "skindermai")
+                self.db = firestore.client(database_id=db_id)
+                print(f"[OK] Firebase Admin & Firestore initialized using {cert_path} with database ID: {db_id}")
             else:
                 print(f"[WARN] Firebase service account file '{cert_path}' NOT FOUND. Admin features will be disabled.")
 
@@ -45,7 +47,8 @@ class FirebaseAuthManager:
         """Returns the Firestore database instance."""
         if not self.db:
             try:
-                self.db = firestore.client()
+                db_id = os.getenv("FIREBASE_DATABASE_ID", "skindermai")
+                self.db = firestore.client(database_id=db_id)
             except Exception as e:
                 print(f"[ERROR] Could not get Firestore client: {e}")
         return self.db
