@@ -45,7 +45,7 @@ def generate_topics(state: AgentState):
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0].strip()
                 
-            topics = json.loads(content)
+            topics = json.loads(content, strict=False)
             if not isinstance(topics, list) or len(topics) == 0:
                  topics = ["Phòng ngừa ung thư da", "Chăm sóc da mụn", "Lợi ích của Vitamin C"]
             print("[LangGraph] Topics generated successfully via LLM.")
@@ -97,7 +97,7 @@ def write_blogs(state: AgentState):
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0].strip()
                 
-            blogs = json.loads(content)
+            blogs = json.loads(content, strict=False)
             import urllib.parse
             import requests
             
