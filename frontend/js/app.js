@@ -530,10 +530,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const blob = await (await fetch(state.lastCapturedImage)).blob();
+      const prevScan = state.history && state.history.length > 0 ? state.history[0] : null;
+      
       const data = await API.analyzeImage(
         blob,
         state.idToken,
         state.currentWeather,
+        prevScan
       );
 
       displayScanResult(data);
@@ -738,8 +741,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return `${size}mm - Nhỏ an toàn (< 6mm)`;
       }
       if (id === "E") { // Evolution
-        if (status.includes("REQUIRE") || status.includes("HISTORY")) return "Cần theo dõi thêm sự thay đổi";
-        if (status.includes("HISTORICAL") || status.includes("NORMAL")) return "Chưa thấy thay đổi";
+        if (status.includes("REQUIRE") || status.includes("HISTORY")) return "Cần thêm lịch sử";
+        if (status.includes("STABLE") || status.includes("ỔN ĐỊNH") || status.includes("NORMAL")) return "Ổn định (Không đổi)";
+        if (status.includes("MINOR") || status.includes("NHỎ") || status.includes("LƯU Ý")) return "Biến đổi nhẹ (Lưu ý)";
+        if (status.includes("SIGNIFICANT") || status.includes("LỚN") || status.includes("CẢNH BÁO")) return "Biến đổi nhanh (Cảnh báo)";
         return "Ổn định";
       }
       return status;

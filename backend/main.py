@@ -344,6 +344,95 @@ def calculate_color(image_np, mask):
     return min(100, max(0, float(score)))
 
 
+def extract_abcde_scores(abcde_dict):
+    """
+    Trích xuất điểm số A, B, C, D thô từ cấu trúc dữ liệu lưu trữ (Firestore/API).
+    """
+    if not abcde_dict:
+        return 0.0, 0.0, 0.0, 0.0
+        
+    a = 0.0
+    if "A_score" in abcde_dict:
+        a = abcde_dict["A_score"]
+    elif "A_asymmetry" in abcde_dict:
+        a = abcde_dict["A_asymmetry"].get("score", 0.0)
+        
+    b = 0.0
+    if "B_score" in abcde_dict:
+        b = abcde_dict["B_score"]
+    elif "B_border" in abcde_dict:
+        b = abcde_dict["B_border"].get("score", 0.0)
+        
+    c = 0.0
+    if "C_score" in abcde_dict:
+        c = abcde_dict["C_score"]
+    elif "C_color" in abcde_dict:
+        c_val = abcde_dict["C_color"]
+        if isinstance(c_val, dict):
+            c = c_val.get("score", 0.0)
+        else:
+            c = float(c_val)
+            
+    d = 0.0
+    if "D_score" in abcde_dict:
+        d = abcde_dict["D_score"]
+    elif "D_diameter" in abcde_dict:
+        d_val = abcde_dict["D_diameter"]
+        if isinstance(d_val, dict):
+            d = d_val.get("score", 0.0)
+        else:
+            d = float(d_val)
+            
+    return float(a), float(b), float(c), float(d)
+
+
+def calculate_evolution_score_and_status(curr_abcde_scores, prev_abcde_dict, curr_risk, prev_risk):
+    """
+    Tính toán chỉ số E (Evolution) và trạng thái biến đổi dựa trên so sánh giữa 2 lần quét.
+    """
+    try:
+        prev_A, prev_B, prev_C, prev_D = extract_abcde_scores(prev_abcde_dict)
+        
+        curr_A = curr_abcde_scores.get("A", 0.0)
+        curr_B = curr_abcde_scores.get("B", 0.0)
+        curr_C = curr_abcde_scores.get("C", 0.0)
+        curr_D = curr_abcde_scores.get("D", 0.0)
+        
+        delta_risk = float(curr_risk) - float(prev_risk)
+        delta_D = curr_D - prev_D
+        delta_A = curr_A - prev_A
+        delta_B = curr_B - prev_B
+        delta_C = curr_C - prev_C
+        
+        # Chỉ tính toán biến đổi xấu đi (tăng kích thước, bất đối xứng hơn, v.v.)
+        pos_deltas = 0.0
+        if delta_risk > 0:
+            pos_deltas += delta_risk * 1.0
+        if delta_D > 0:
+            pos_deltas += delta_D * 1.5
+        if delta_A > 0:
+            pos_deltas += delta_A * 0.5
+        if delta_B > 0:
+            pos_deltas += delta_B * 0.5
+        if delta_C > 0:
+            pos_deltas += delta_C * 0.5
+            
+        if pos_deltas <= 3.0:
+            e_score = max(0.0, min(100.0, 10.0 + delta_risk))
+            e_status = "Stable"
+        elif pos_deltas <= 15.0:
+            e_score = 10.0 + pos_deltas * 2.0
+            e_status = "Minor Evolution"
+        else:
+            e_score = min(100.0, 40.0 + (pos_deltas - 15.0) * 1.5)
+            e_status = "Significant Evolution"
+            
+        return round(float(e_score), 1), e_status
+    except Exception as e:
+        print(f"[ERROR] Failed to calculate evolution: {e}")
+        return 0.0, "Requires History"
+
+
 def process_image(image_bytes: bytes):
     if not MODEL_LOADED:
         return None
@@ -636,12 +725,17 @@ async def analyze_image(
     authorization: str = Form(None),
     uv_index: float = Form(None),
     temperature: float = Form(None),
-    location: str = Form(None)
+    location: str = Form(None),
+    prev_abcde: str = Form(None),
+    prev_risk: float = Form(None)
 ):
     contents = await file.read()
     
     # Run Pipeline
     result = process_image(contents)
+    
+    e_score = 0.0
+    e_status = "Requires History"
     
     if result:
         class_idx, confidence, bbox, top3, abcde_scores, overlay_pil = result
@@ -652,13 +746,48 @@ async def analyze_image(
         else:
             base_risk = round((1.0 - confidence) * 100, 1)
             
+        # --- Compute E (Evolution) dynamic score and status ---
+        prev_abcde_dict = None
+        prev_risk_val = None
+        
+        if prev_abcde:
+            try:
+                prev_abcde_dict = json.loads(prev_abcde)
+            except Exception:
+                pass
+        if prev_risk is not None:
+            prev_risk_val = prev_risk
+
+        user = get_current_user(authorization)
+        if not prev_abcde_dict and user:
+            try:
+                user_id = user['uid']
+                db = firebase_auth_manager.get_db()
+                if db:
+                    docs = db.collection("analysis_records")\
+                             .where("user_id", "==", user_id)\
+                             .order_by("created_at", direction="DESCENDING")\
+                             .limit(1)\
+                             .get()
+                    if docs and len(docs) > 0:
+                        prev_record = docs[0].to_dict()
+                        prev_abcde_dict = prev_record.get("abcde", {})
+                        prev_risk_val = prev_record.get("risk_score", 0.0)
+            except Exception as e:
+                print(f"[WARN] Failed to fetch previous scan for evolution: {e}")
+
+        if prev_abcde_dict:
+            e_score, e_status = calculate_evolution_score_and_status(
+                abcde_scores, prev_abcde_dict, base_risk, prev_risk_val or 0.0
+            )
+
         # Real ABCDE logic from calculation
         abcde_final = {
             "A_score": abcde_scores["A"],
             "B_score": abcde_scores["B"],
             "C_score": abcde_scores["C"],
             "D_score": abcde_scores["D"],
-            "E_score": abcde_scores["E"]
+            "E_score": e_score
         }
     else:
         # Fallback if processing failed
@@ -761,7 +890,7 @@ async def analyze_image(
             },
             "E_evolution": {
                 "score": abcde_final["E_score"],
-                "status": "Requires History"
+                "status": e_status
             }
         },
         "bbox": bbox,

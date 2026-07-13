@@ -47,7 +47,7 @@ const API = {
     /**
      * Analyze image
      */
-    async analyzeImage(imageBlob, idToken, weatherData) {
+    async analyzeImage(imageBlob, idToken, weatherData, prevScan = null) {
         try {
             const formData = new FormData();
             formData.append('file', imageBlob, 'scan.jpg');
@@ -60,6 +60,11 @@ const API = {
                 formData.append('uv_index', weatherData.uvIndex);
                 formData.append('temperature', weatherData.temp);
                 formData.append('location', weatherData.location);
+            }
+
+            if (prevScan && prevScan.details) {
+                formData.append('prev_abcde', JSON.stringify(prevScan.details.abcde));
+                formData.append('prev_risk', prevScan.details.risk_score || prevScan.risk);
             }
 
             const response = await fetch(`${API_BASE_URL}/analyze`, {
